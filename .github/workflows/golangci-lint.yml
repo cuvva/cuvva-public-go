@@ -1,0 +1,21 @@
+name: golangci-lint
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+jobs:
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run lint and report
+        uses: reviewdog/action-golangci-lint@v1
+        env:
+          GOLANGCI_LINT_VERSION: "v1.28"
+        with:
+          workdir: "go"
+          github_token: ${{ secrets.github_token }}
+          tool_name: "GolangCI Linter"
+          filter_mode: "nofilter" # check the whole repo, not just lines added or changed
