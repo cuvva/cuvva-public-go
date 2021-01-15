@@ -8,7 +8,6 @@ import (
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/cuvva/cuvva-public-go/lib/servicecontext"
-
 	"github.com/sirupsen/logrus"
 )
 
