@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/aws/aws-sdk-go v1.36.27
+	github.com/blang/semver v3.5.1+incompatible
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/jamescun/basex v0.0.0-20180407124237-e1bcb39ab18e
 	github.com/onsi/ginkgo v1.14.2 // indirect

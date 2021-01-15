@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
+	"github.com/cuvva/cuvva-public-go/lib/middleware/request"
 	"github.com/cuvva/cuvva-public-go/lib/version"
 )
 
@@ -73,7 +74,7 @@ func (c *Client) Do(ctx context.Context, method, path string, params url.Values,
 		ctx = context.Background()
 	}
 
-	ctx, requestID := GetOrSetRequestID(ctx)
+	ctx, requestID := request.GetOrSetRequestID(ctx)
 
 	req := &http.Request{
 		Method: method,
