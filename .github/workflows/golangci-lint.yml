@@ -15,7 +15,6 @@ jobs:
         env:
           GOLANGCI_LINT_VERSION: "v1.28"
         with:
-          workdir: "go"
           github_token: ${{ secrets.github_token }}
           tool_name: "GolangCI Linter"
           filter_mode: "nofilter" # check the whole repo, not just lines added or changed
