@@ -8,21 +8,18 @@ import (
 	"time"
 )
 
-// ErrInvalidInput is a set error message for when the input to a function is invalid.
 var ErrInvalidInput = errors.New("invalid input")
 
 var dateRegex = regexp.MustCompile(`^\d{2}(\d{1})(\d{1})-(\d{2})-(\d{2})$`)
 var dlnRegex = regexp.MustCompile(`^[A-Z]{1,5}9{0,4}\d(?:[05][1-9]|[16][0-2])(?:0[1-9]|[12]\d|3[01])\d(?:99|[A-Z][A-Z9])[A-HJ-NPR-X2-9][A-Z]{2}$`)
 
-// UserDetails contains the set of details about a user that can be converted to and from a driving license number.
 type UserDetails struct {
-	PersonalName string
-	FamilyName   string
-	Sex          string
-	BirthDate    string
+	PersonalName string `json:"personal_name"`
+	FamilyName   string `json:"family_name"`
+	Sex          string `json:"sex"`
+	BirthDate    string `json:"birth_date"`
 }
 
-// Generate a DLN from a set of user details.
 func Generate(userDetails UserDetails, includeMiddleName bool) (string, error) {
 	sectA, err := generateSectionA(userDetails.FamilyName)
 	if err != nil {
@@ -39,7 +36,6 @@ func Generate(userDetails UserDetails, includeMiddleName bool) (string, error) {
 	return fmt.Sprintf("%s%s%s", sectA, sectB, sectC), nil
 }
 
-// Validate a DLN and set of user details match.
 func Validate(dln string, userDetails UserDetails, checkMiddleName bool) (bool, error) {
 	subDLN, err := Generate(userDetails, checkMiddleName)
 
@@ -50,19 +46,14 @@ func Validate(dln string, userDetails UserDetails, checkMiddleName bool) (bool, 
 	return subDLN == dln[:len(subDLN)], nil
 }
 
-// Parse a DLN string into a userDetails struct, it will loose data though.
 func Parse(dln string, includeMiddleName bool) (*UserDetails, error) {
 	if dln == "" || len(dln) != 16 || !dlnRegex.MatchString(dln) {
 		return nil, ErrInvalidInput
 	}
 
 	familyName := parseSectionA(dln[:5])
-	sex, birthDate, err := parseSectionB(dln[5:11])
+	sex, birthDate := parseSectionB(dln[5:11])
 	initials := parseSectionC(dln[11:13], includeMiddleName)
-
-	if err != nil {
-		return nil, err
-	}
 
 	return &UserDetails{
 		PersonalName: initials,
@@ -133,7 +124,7 @@ func parseSectionA(a string) string {
 	return strings.Replace(familyName, "9", "", 4)
 }
 
-func parseSectionB(in string) (string, string, error) {
+func parseSectionB(in string) (string, string) {
 	b := []byte(in)
 
 	var sex string
@@ -144,13 +135,9 @@ func parseSectionB(in string) (string, string, error) {
 		sex = "M"
 	}
 
-	birthDate := fmt.Sprintf("%c%c%s", b[0], b[5], b[1:5])
-	parsed, err := time.Parse("060102", birthDate)
-	if err != nil {
-		return "", "", err
-	}
+	birthDate := fmt.Sprintf("%c%c-%s-%s", b[0], b[5], b[1:3], b[3:5])
 
-	return sex, parsed.Format("2006-01-02"), nil
+	return sex, birthDate
 }
 
 func parseSectionC(c string, includeMiddleName bool) string {
