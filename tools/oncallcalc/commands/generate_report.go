@@ -1,0 +1,69 @@
+package commands
+
+import (
+	"errors"
+	"time"
+
+	"github.com/cuvva/cuvva-public-go/tools/oncallcalc/app"
+	"github.com/cuvva/cuvva-public-go/tools/oncallcalc/config"
+	"github.com/spf13/cobra"
+)
+
+var ScheduleID string
+var TimeIn string
+var Verbose bool
+
+func init() {
+	GenerateReportCmd.Flags().StringVarP(&ScheduleID, "schedule_id", "s", "PKICNIO", "Schedule ID from PagerDuty")
+	GenerateReportCmd.Flags().StringVarP(&TimeIn, "time", "t", "Jan 2020", "Which month and year should we look at?")
+	GenerateReportCmd.Flags().BoolVarP(&Verbose, "verbose", "v", false, "Verbose mode?")
+}
+
+var GenerateReportCmd = &cobra.Command{
+	Use:     "generate-report",
+	Aliases: []string{"gr"},
+	Short:   "Generate reports on a month",
+	Long:    "Given a month, generate a report on the payouts for anyone who was oncall.",
+	Args:    cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		client, err := config.BuildPDClient()
+		if err != nil {
+			return err
+		}
+
+		app := app.New(client)
+
+		timeIn, err := convMonthToMonth(TimeIn)
+		if err != nil {
+			if Verbose {
+				cmd.Printf("%+v\n", timeIn)
+			}
+			return err
+		}
+
+		rota, debug, err := app.GenerateRota(ScheduleID, timeIn.Year(), timeIn.Month())
+		if err != nil {
+			if Verbose {
+				cmd.Printf("%+v\n", debug)
+			}
+			return err
+		}
+
+		cmd.Println(app.StringifyRota(rota))
+
+		return nil
+	},
+}
+
+func convMonthToMonth(in string) (time.Time, error) {
+	if in == "" {
+		return time.Now(), errors.New("you must provide a --month param")
+	}
+
+	t, err := time.Parse("Jan 2006", in)
+	if err != nil {
+		return time.Now(), err
+	}
+
+	return t, nil
+}
