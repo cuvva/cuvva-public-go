@@ -3,7 +3,7 @@ package ab
 import (
 	"testing"
 
-	"github.com/cuvva-public-go/lib/ksuid"
+	"github.com/cuvva/cuvva-public-go/lib/ksuid"
 )
 
 func TestCheck(t *testing.T) {
