@@ -6,7 +6,7 @@ import (
 
 // Revision is the global build revision from source control as used by
 // the ServerHeader middleware, to be set using compiler ldflags like:
-// `-ldflags="-X cuvva/lib/version.Revision=$(git rev-parse HEAD)"`
+// `-ldflags="-X github.com/cuvva/cuvva-public-go/lib/version.Revision=$(git rev-parse HEAD)"`
 var Revision = "dev"
 
 // Truncated is up to 7 characters of Revision - so git hashes look as they are
