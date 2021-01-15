@@ -7,7 +7,7 @@ keen to work with you to enable this.
 
 ```go
 import (
-	"cuvva/lib/vrm"
+	"github.com/cuvva/cuvva-public-go/lib/vrm"
 )
 
 func main() {
@@ -34,7 +34,7 @@ func main() {
 ## Installation
 
 ```bash
-$ go get -u cuvva/lib/vrm
+$ go get -u github.com/cuvva/cuvva-public-go/lib/vrm
 ```
 
 ## API
