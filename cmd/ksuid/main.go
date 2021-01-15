@@ -55,7 +55,7 @@ var ParseCommand = &cobra.Command{
 
 	Run: func(cmd *cobra.Command, args []string) {
 		for _, arg := range args {
-			id, err := ksuid.Parse([]byte(arg))
+			id, err := ksuid.Parse(arg)
 			if err != nil {
 				fmt.Printf("ID:    %s\nError: %s\n\n", arg, err)
 				continue
