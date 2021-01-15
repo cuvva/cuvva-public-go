@@ -1,14 +1,8 @@
 package pg
 
 import (
-	sq "github.com/Masterminds/squirrel"
 	"github.com/lib/pq"
 )
-
-// NewQueryBuilder creates a new squirrel query builder with dollar placeholders
-func NewQueryBuilder() sq.StatementBuilderType {
-	return sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
-}
 
 // IsDuplicate extracts a unique_constraint_violation from a database error.
 func IsDuplicate(err error) (constraint string, ok bool) {
@@ -42,9 +36,4 @@ func IsPLv8Error(err error) (msg string, ok bool) {
 	}
 
 	return
-}
-
-// Scannable matches the interface for the scannable sql.Row/sql.Rows
-type Scannable interface {
-	Scan(dest ...interface{}) error
 }

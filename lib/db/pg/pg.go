@@ -3,6 +3,7 @@ package pg
 import (
 	"database/sql"
 
+	sq "github.com/Masterminds/squirrel"
 	_ "github.com/lib/pq" // required for the PGSQL driver to be loaded
 )
 
@@ -18,4 +19,14 @@ func Connect(postgresURI string) (*sql.DB, error) {
 		return nil, err
 	}
 	return db, nil
+}
+
+// NewQueryBuilder creates a new squirrel query builder with dollar placeholders
+func NewQueryBuilder() sq.StatementBuilderType {
+	return sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
+}
+
+// Scannable matches the interface for the scannable sql.Row/sql.Rows
+type Scannable interface {
+	Scan(dest ...interface{}) error
 }
