@@ -91,7 +91,7 @@ func TestParse(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			id, err := Parse(test.Source)
+			id, err := Parse(string(test.Source))
 			if test.Error == nil {
 				if assert.NoError(t, err) {
 					assert.Equal(t, test.ID, id)
@@ -105,7 +105,7 @@ func TestParse(t *testing.T) {
 
 func BenchmarkParse(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		Parse([]byte("user_000000BPG6Lks9tQoAiJYrBRSXPX6"))
+		Parse("user_000000BPG6Lks9tQoAiJYrBRSXPX6")
 	}
 }
 
@@ -172,7 +172,6 @@ func TestID(t *testing.T) {
 		}{
 			{"Short", []byte(`""`), ID{}, &ParseError{"ksuid too short"}},
 			{"Long", []byte(`"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"`), ID{}, &ParseError{"ksuid too long"}},
-			{"NotString", []byte(`1111111111111111111111111111111`), ID{}, &ParseError{"expected string"}},
 			{"InvalidBase62", []byte(`"AAAAAAAAAAAAAAAAAAAAAAAAA//AA"`), ID{}, &ParseError{"invalid base62: output buffer too short"}},
 			{
 				"Bare", []byte(`"000000BPG6Lks9tQoAiJYrBRSXPX6"`),

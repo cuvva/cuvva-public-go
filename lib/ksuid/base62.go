@@ -1,11 +1,8 @@
 package ksuid
 
 const (
-	// lexicographic ordering (based on Unicode table)
-	base62Characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	zeroString       = "00000000000000000000000000000"
-	offsetUppercase  = 10
-	offsetLowercase  = 36
+	offsetUppercase = 10
+	offsetLowercase = 36
 )
 
 // converts base62 bytes into the number value that it represents.
@@ -67,7 +64,7 @@ func fastDecodeBase62(dst []byte, src []byte) error {
 		remainder := uint64(0)
 
 		for _, c := range bp {
-			value := uint64(c) + uint64(remainder)*srcBase
+			value := uint64(c) + remainder*srcBase
 			digit := value / dstBase
 			remainder = value % dstBase
 

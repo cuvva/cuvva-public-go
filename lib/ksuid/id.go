@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"database/sql/driver"
 	"encoding/binary"
+	"encoding/json"
 	"time"
 
 	"github.com/jamescun/basex"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/bsonrw"
+	"go.mongodb.org/mongo-driver/bson/bsontype"
 )
 
 // ID is an optionally prefixed, k-sortable globally unique ID.
@@ -27,7 +30,7 @@ const (
 
 // MustParse unmarshals an ID from a string and panics on error.
 func MustParse(src string) ID {
-	id, err := Parse([]byte(src))
+	id, err := Parse(src)
 
 	if err != nil {
 		panic(err)
@@ -37,8 +40,9 @@ func MustParse(src string) ID {
 }
 
 // Parse unmarshals an ID from a series of bytes.
-func Parse(src []byte) (id ID, err error) {
-	id.Environment, id.Resource, src = splitPrefixID(src)
+func Parse(str string) (id ID, err error) {
+	var src []byte
+	id.Environment, id.Resource, src = splitPrefixID([]byte(str))
 
 	if id.Environment == "" {
 		id.Environment = Production
@@ -114,7 +118,7 @@ func (id ID) Equal(x ID) bool {
 func (id *ID) Scan(src interface{}) error {
 	switch src := src.(type) {
 	case string:
-		n, err := Parse([]byte(src))
+		n, err := Parse(src)
 		if err != nil {
 			return err
 		}
@@ -123,7 +127,7 @@ func (id *ID) Scan(src interface{}) error {
 		return nil
 
 	case []byte:
-		n, err := Parse(src)
+		n, err := Parse(string(src))
 		if err != nil {
 			return err
 		}
@@ -165,45 +169,41 @@ func (id ID) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements a custom JSON string unmarshaler.
-func (id *ID) UnmarshalJSON(b []byte) error {
-	if len(b) < encodedLen+2 {
-		return &ParseError{"ksuid too short"}
-	} else if b[0] != '"' || b[len(b)-1] != '"' {
-		return &ParseError{"expected string"}
-	}
-
-	n, err := Parse(b[1 : len(b)-1])
-	if err != nil {
-		return err
-	}
-
-	*id = n
-	return nil
-}
-
-// GetBSON provides the necessary support for mgo.Getter
-func (id ID) GetBSON() (interface{}, error) {
-	return id.String(), nil
-}
-
-// GetBSON provides the necessary support for mgo.Setter
-func (id *ID) SetBSON(raw bson.Raw) error {
-	if raw.Kind != 0x02 {
-		return &ParseError{"expected string"}
-	}
-
+func (id *ID) UnmarshalJSON(b []byte) (err error) {
 	var str string
-	if err := raw.Unmarshal(&str); err != nil {
-		return err
+	err = json.Unmarshal(b, &str)
+	if err != nil {
+		return
 	}
 
-	n, err := Parse([]byte(str))
+	n, err := Parse(str)
 	if err != nil {
-		return err
+		return
 	}
 
 	*id = n
-	return nil
+	return
+}
+
+// MarshalBSONValue implements bson.ValueMarshaler
+func (id ID) MarshalBSONValue() (bsontype.Type, []byte, error) {
+	return bson.MarshalValue(id.String())
+}
+
+// UnmarshalBSONValue implements bson.ValueUnmarshaler
+func (id *ID) UnmarshalBSONValue(t bsontype.Type, raw []byte) (err error) {
+	str, err := bsonrw.NewBSONValueReader(t, raw).ReadString()
+	if err != nil {
+		return
+	}
+
+	n, err := Parse(str)
+	if err != nil {
+		return
+	}
+
+	*id = n
+	return
 }
 
 // Bytes stringifies and returns ID as a byte slice.
