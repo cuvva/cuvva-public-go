@@ -4,8 +4,6 @@ crpc contains a client and server conforming to the [Cuvva RPC standard](https:/
 
 It is heavily influenced by [net/rpc](https://golang.org/pkg/net/rpc/) and [Monzo Typhon](https://godoc.org/github.com/monzo/typhon).
 
-crpc was originally known as Zeus. In greek mythology, Typhon attempts to overthrow Zeus, however is unsuccessful and Zeus maintains supremacy over the cosmos.
-
 
 ## Components
 
