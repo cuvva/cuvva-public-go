@@ -9,15 +9,16 @@ const (
 )
 
 func HasErrorCode(err error, code int) bool {
-	we, ok := err.(mongo.WriteException)
-	if !ok {
-		return false
-	}
-
-	for _, err := range we.WriteErrors {
-		if err.Code == code {
-			return true
+	switch v := err.(type) {
+	case mongo.WriteException:
+	case mongo.BulkWriteException:
+		for _, err := range v.WriteErrors {
+			if err.Code == code {
+				return true
+			}
 		}
+	default:
+		return false
 	}
 
 	return false
