@@ -10,9 +10,8 @@ const (
 
 func HasErrorCode(err error, code int) bool {
 	switch v := err.(type) {
-	case mongo.BulkWriteException:
-		fallthrough
 	case mongo.WriteException:
+	case mongo.BulkWriteException:
 		for _, err := range v.WriteErrors {
 			if err.Code == code {
 				return true
