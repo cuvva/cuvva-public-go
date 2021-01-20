@@ -23,6 +23,8 @@ func To(in map[string]interface{}) map[string]interface{} {
 }
 
 func From(in map[string]interface{}) map[string]interface{} {
+	// TODO(gm): build this
+
 	out := make(map[string]interface{})
 
 	return out
