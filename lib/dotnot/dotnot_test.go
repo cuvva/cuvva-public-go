@@ -35,6 +35,16 @@ var testsuite = []struct {
 		from: `{"nest":{"two":["arrays","must","make","it","through"],"two_half":{"and_siblings_too":true}},"root":"key"}`,
 		to:   `{"nest.two":["arrays","must","make","it","through"],"nest.two_half.and_siblings_too":true,"root":"key"}`,
 	},
+	{
+		name: "Dotnotate array of objects",
+		from: `{"nest":{"two":[{"key":"one"},{"key":"two"}]},"root":"key"}`,
+		to:   `{"nest.two.0.key":"one","nest.two.1.key":"two","root":"key"}`,
+	},
+	{
+		name: "Dotnotate set of arrays",
+		from: `{"one":[{"set":[1,2,3]},{"set":[1,2,3]},{"set":[1,2,3]}]}`,
+		to:   `{"one.0.set":[1,2,3],"one.1.set":[1,2,3],"one.2.set":[1,2,3]}`,
+	},
 }
 
 func TestTo(t *testing.T) {

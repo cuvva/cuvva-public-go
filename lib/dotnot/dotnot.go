@@ -10,9 +10,19 @@ func To(in map[string]interface{}) map[string]interface{} {
 	for k, v := range in {
 		switch t := v.(type) {
 		case map[string]interface{}:
-			n := To(t)
-			for nk, nv := range n {
+			for nk, nv := range To(t) {
 				out[fmt.Sprintf("%s.%s", k, nk)] = nv
+			}
+		case []interface{}:
+			for sk, sv := range t {
+				switch u := sv.(type) {
+				case map[string]interface{}:
+					for nsk, nsv := range To(u) {
+						out[fmt.Sprintf("%s.%d.%s", k, sk, nsk)] = nsv
+					}
+				default:
+					out[k] = v
+				}
 			}
 		default:
 			out[k] = v
