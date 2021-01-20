@@ -5,10 +5,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/cuvva/cuvva-public-go/lib/cher"
+	"github.com/cuvva/cuvva-public-go/lib/config"
 	"github.com/cuvva/cuvva-public-go/tools/cdep"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/app"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/parsers"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -72,8 +77,23 @@ var UpdateCmd = &cobra.Command{
 			return err
 		}
 
+		region := "eu-west-1"
+		awsSession, err := session.NewSessionWithOptions(session.Options{
+			Profile: "root",
+			Config: aws.Config{
+				Region:      &region,
+				Credentials: config.AWS{}.Credentials(),
+			},
+		})
+		if err != nil {
+			return errors.Wrap(err, "aws:")
+		}
+
+		sns := sns.New(awsSession)
+
 		a := &app.App{
 			DryRun: dryRun,
+			SNS:    sns,
 		}
 
 		overruleChecks, err := cmd.Flags().GetStringSlice("overrule-checks")

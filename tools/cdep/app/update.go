@@ -10,7 +10,9 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/cuvva/cuvva-public-go/lib/config"
 	"github.com/cuvva/cuvva-public-go/lib/ptr"
@@ -22,7 +24,6 @@ import (
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/slack-go/slack"
 )
 
 var imageName = regexp.MustCompile(`"docker_image_name"\s*:\s*"([a-zA-Z\d_-]+)"`)
@@ -167,15 +168,22 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 	commitMessage := fmt.Sprintf("cdep: %s", req.String("update"))
 
 	if !a.DryRun && req.Environment == "prod" {
-		textTemplate := ":bell: A prod deployment is happening :bell:\n\n:wrench: *command*: `%s`\n:technologist: *user*: `%s`"
+		textTemplate := ":wrench: *command*: `%s`\n:technologist: *user*: `%s`"
 		text := fmt.Sprintf(textTemplate, req.String("update"), strings.Split(string(user), "\n")[0])
 		if req.Message != "" {
 			text = text + fmt.Sprintf("\n\n:email: *message*: `%s`", req.Message)
 		}
 
-		slackMessage := &slack.WebhookMessage{Text: text}
-
-		slack.PostWebhookContext(ctx, "https://hooks.slack.com/services/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", slackMessage)
+		arn := "arn:aws:sns:eu-west-1:005717268539:cuvva-deployments-prod"
+		subject := "A prod deployment is happening"
+		_, err := a.SNS.PublishWithContext(ctx, &sns.PublishInput{
+			TopicArn: &arn,
+			Subject:  &subject,
+			Message:  &text,
+		})
+		if err, ok := err.(awserr.Error); !ok || err.Code() != "EndpointDisabled" {
+			fmt.Println(err)
+		}
 	}
 
 	if a.DryRun {
