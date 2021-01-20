@@ -37,15 +37,15 @@ var GenerateReportCmd = &cobra.Command{
 
 		app := app.New(client, govUK)
 
-		if err := app.GetBankHolidays(context.Background()); err != nil {
-			return err
-		}
-
 		timeIn, err := convMonthToMonth(TimeIn)
 		if err != nil {
 			if Verbose {
 				cmd.Printf("%+v\n", timeIn)
 			}
+			return err
+		}
+
+		if err := app.GetBankHolidays(context.Background(), timeIn.Year()); err != nil {
 			return err
 		}
 
