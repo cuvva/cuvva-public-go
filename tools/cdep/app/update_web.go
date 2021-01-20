@@ -65,6 +65,7 @@ func (a App) UpdateWeb(ctx context.Context, req *parsers.Params, overruleChecks 
 		return err
 	}
 
+	var tf *tfe.Client
 	webDeploymentBucket := fmt.Sprintf("cuvva-web-deployments-%s", req.System)
 	app := req.Items[0]
 	cfClient := cloudfront.New(awsSession)
@@ -144,8 +145,6 @@ func (a App) UpdateWeb(ctx context.Context, req *parsers.Params, overruleChecks 
 		return nil
 	}
 
-	var tf *tfe.Client
-
 	if req.System == "prod" {
 		log.Info("locking terraform workspace")
 
@@ -154,7 +153,7 @@ func (a App) UpdateWeb(ctx context.Context, req *parsers.Params, overruleChecks 
 			return cher.New("terraform_token_not_found", nil)
 		}
 
-		tf, err := tfe.NewClient(&tfe.Config{
+		tf, err = tfe.NewClient(&tfe.Config{
 			Token: token,
 		})
 		if err != nil {
