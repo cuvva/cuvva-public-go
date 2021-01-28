@@ -73,23 +73,6 @@ var UpdateDefaultCmd = &cobra.Command{
 			return err
 		}
 
-		// TODO(gm): remove this when we move away from Rancher
-		if params.Type == "service" {
-			accept := []string{"y", "yes"}
-			var in string
-
-			fmt.Println("=== Warning ===")
-			fmt.Println("Running this on prod is not stable while we are using Rancher.")
-			fmt.Println("Are you sure you want to continue? (y/N)")
-			fmt.Printf("> ")
-			fmt.Scanln(&in)
-
-			if !slicecontains.String(accept, strings.ToLower(in)) {
-				fmt.Println("Thanks, come again soon. No changes.")
-				os.Exit(0)
-			}
-		}
-
 		return a.UpdateDefault(ctx, params, overruleChecks)
 	},
 }
