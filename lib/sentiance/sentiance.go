@@ -22,6 +22,11 @@ type GetEventAtStartDateRequest struct {
 	StartDate       time.Time `json:"start_date"`
 }
 
+type GetEventByIDRequest struct {
+	SentianceUserID string `json:"sentiance_user_id"`
+	EventID         string `json:"event_id"`
+}
+
 type EnrichTransportEventResponse struct {
 	EventID      string `json:"event_id"`
 	Type         string `json:"type"`
@@ -36,7 +41,7 @@ type GraphQLRequest struct {
 	Variables interface{} `json:"variables"`
 }
 
-type GetEventAtStartDateResponse struct {
+type TransportEventResponse struct {
 	Data DataResponse `json:"data"`
 }
 
