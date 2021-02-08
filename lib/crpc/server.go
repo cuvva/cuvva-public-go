@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/cuvva/cuvva-public-go/lib/crpc/validation"
 	"io"
 	"net/http"
 	"reflect"
@@ -324,7 +325,11 @@ func (s *Server) Register(method, version string, schema gojsonschema.JSONLoader
 // RegisterFunc associates a method name and version with a HandlerFunc,
 // and optional middleware. This function is not thread safe and must be run in
 // serial if called multiple times.
-func (s *Server) RegisterFunc(method, version string, schema gojsonschema.JSONLoader, fn *HandlerFunc, mw ...MiddlewareFunc) {
+func (s *Server) RegisterFunc(method, version string, reqSchema gojsonschema.JSONLoader, fn *HandlerFunc, mw ...MiddlewareFunc) {
+	s.RegisterValidatedFunc(method, version, reqSchema, nil, fn, mw...)
+}
+
+func (s *Server) RegisterValidatedFunc(method, version string, reqSchema gojsonschema.JSONLoader, respSchema gojsonschema.JSONLoader, fn *HandlerFunc, mw ...MiddlewareFunc) {
 	if s.registeredVersionMethods == nil {
 		s.registeredVersionMethods = make(map[string]map[string]*handler)
 	}
@@ -333,7 +338,7 @@ func (s *Server) RegisterFunc(method, version string, schema gojsonschema.JSONLo
 		s.registeredPreviewMethods = make(map[string]*handler)
 	}
 
-	if fn == nil && schema != nil {
+	if fn == nil && reqSchema != nil {
 		panic("schema validation configured, but handler is nil")
 	}
 
@@ -353,32 +358,43 @@ func (s *Server) RegisterFunc(method, version string, schema gojsonschema.JSONLo
 
 	if fn == nil {
 		s.setRoute(version, method, nil)
-	} else {
-		if schema != nil {
-			compiledSchema, err := gojsonschema.NewSchemaLoader().Compile(schema)
-			if err != nil {
-				panic(fmt.Sprintf("json schema error in %s: %s", method, err))
-			}
-
-			mw = append([]MiddlewareFunc{s.AuthenticationMiddleware, Validate(compiledSchema)}, mw...)
-		} else {
-			mw = append([]MiddlewareFunc{s.AuthenticationMiddleware}, mw...)
-		}
-
-		// This wraps the middleware funcs inside each one in reverse order
-		for i := range mw {
-			p := mw[len(mw)-1-i](*fn)
-			fn = &p
-		}
-
-		for i := range s.mw {
-			p := s.mw[len(s.mw)-1-i](*fn)
-			fn = &p
-		}
-
-		s.setRoute(version, method, &handler{version, *fn})
+		s.buildRoutes()
+		return
 	}
 
+	middleware := []MiddlewareFunc{s.AuthenticationMiddleware}
+	if reqSchema != nil {
+		compiledSchema, err := gojsonschema.NewSchemaLoader().Compile(reqSchema)
+		if err != nil {
+			panic(fmt.Sprintf("request schema error in %s: %s", method, err))
+		}
+
+		middleware = append(middleware, Validate(compiledSchema))
+	}
+
+	if respSchema != nil {
+		compiledSchema, err := gojsonschema.NewSchemaLoader().Compile(respSchema)
+		if err != nil {
+			panic(fmt.Sprintf("response schema error in %s: %s", method, err))
+		}
+
+		middleware = append(middleware, validation.ValidateResponseMiddleware(compiledSchema))
+	}
+
+	middleware = append(middleware, mw...)
+
+	// This wraps the middleware funcs inside each one in reverse order
+	for i := range mw {
+		p := mw[len(mw)-1-i](*fn)
+		fn = &p
+	}
+
+	for i := range s.mw {
+		p := s.mw[len(s.mw)-1-i](*fn)
+		fn = &p
+	}
+
+	s.setRoute(version, method, &handler{version, *fn})
 	s.buildRoutes()
 }
 
