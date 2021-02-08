@@ -2,6 +2,7 @@ package mixpanel
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -33,15 +34,19 @@ func NewClient(apiSecret string) *Client {
 	return &httpClient
 }
 
-func (c Client) Export(fromDate, toDate time.Time) (ers *ExportResultScanner, err error) {
+func (c Client) Export(ctx context.Context, fromDate, toDate time.Time) (ers *ExportResultScanner, err error) {
 	// https://developer.mixpanel.com/docs/exporting-raw-data
-	URLTemplate := `https://data.mixpanel.com/api/2.0/export/?from_date=%s&to_date=%s`
-	URL := fmt.Sprintf(URLTemplate,
+	urlTemplate := `https://data.mixpanel.com/api/2.0/export/?from_date=%s&to_date=%s`
+	url := fmt.Sprintf(urlTemplate,
 		fromDate.Format("2006-01-02"),
 		toDate.Format("2006-01-02"),
 	)
 
-	resp, err := c.Get(URL)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.Do(req)
 	if err != nil {
 		return nil, err
 	}
