@@ -14,11 +14,11 @@ type Envelope struct {
 type Header struct {
 	XMLName xml.Name `xml:"http://schemas.xmlsoap.org/soap/envelope/ Header"`
 
-	Elements []interface{}
+	Content interface{}
 }
 
 type Body struct {
 	XMLName xml.Name `xml:"http://schemas.xmlsoap.org/soap/envelope/ Body"`
 
-	Elements []interface{}
+	Content interface{}
 }
