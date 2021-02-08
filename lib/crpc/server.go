@@ -11,6 +11,7 @@ import (
 	"sort"
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
+	"github.com/cuvva/cuvva-public-go/lib/crpc/validation"
 	"github.com/xeipuuv/gojsonschema"
 )
 
@@ -77,13 +78,70 @@ type MiddlewareFunc func(next HandlerFunc) HandlerFunc
 // WrappedFunc contains the wrapped handler, and some additional information
 // about the function that was determined during the reflection process
 type WrappedFunc struct {
-	Handler       HandlerFunc
 	AcceptsInput  bool
 	ReturnsResult bool
+
+	function          reflect.Value
+	reqType           reflect.Type
+	responseInspector func(interface{})
 }
 
 var errorType = reflect.TypeOf((*error)(nil)).Elem()
 var contextType = reflect.TypeOf((*context.Context)(nil)).Elem()
+
+func (f *WrappedFunc) ServeHTTP(w http.ResponseWriter, r *Request) error {
+	ctx := reflect.ValueOf(r.Context())
+	var inputs []reflect.Value
+
+	if f.reqType == nil {
+		if r.Body != nil {
+			i, err := r.Body.Read(make([]byte, 1))
+			if i != 0 || err != io.EOF {
+				return cher.New(cher.BadRequest, nil, cher.New("unexpected_request_body", nil))
+			}
+		}
+
+		inputs = []reflect.Value{ctx}
+	} else {
+		if r.Body == nil {
+			return cher.New(cher.BadRequest, nil, cher.New("missing_request_body", nil))
+		}
+
+		req := reflect.New(f.reqType)
+		err := json.NewDecoder(r.Body).Decode(req.Interface())
+		if err == io.EOF {
+			return cher.New(cher.BadRequest, nil, cher.New("missing_request_body", nil))
+		} else if err != nil {
+			return fmt.Errorf("crpc: json decoder error: %w", err)
+		}
+
+		inputs = []reflect.Value{ctx, req}
+	}
+
+	res := f.function.Call(inputs)
+
+	if err := res[len(res)-1]; !err.IsNil() {
+		return err.Interface().(error)
+	}
+
+	if len(res) == 1 {
+		w.WriteHeader(http.StatusNoContent)
+	} else if len(res) == 2 {
+		enc := json.NewEncoder(w)
+		enc.SetEscapeHTML(false)
+		out := res[0].Interface()
+		if f.responseInspector != nil {
+			f.responseInspector(out)
+		}
+
+		err := enc.Encode(out)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 // Wrap reflects a HandlerFunc from any function matching the
 // following signatures:
@@ -142,59 +200,12 @@ func Wrap(fn interface{}) (*WrappedFunc, error) {
 		}
 	}
 
-	hn := func(w http.ResponseWriter, r *Request) error {
-		ctx := reflect.ValueOf(r.Context())
-		var inputs []reflect.Value
-
-		if reqT == nil {
-			if r.Body != nil {
-				i, err := r.Body.Read(make([]byte, 1))
-				if i != 0 || err != io.EOF {
-					return cher.New(cher.BadRequest, nil, cher.New("unexpected_request_body", nil))
-				}
-			}
-
-			inputs = []reflect.Value{ctx}
-		} else {
-			if r.Body == nil {
-				return cher.New(cher.BadRequest, nil, cher.New("missing_request_body", nil))
-			}
-
-			req := reflect.New(reqT)
-			err := json.NewDecoder(r.Body).Decode(req.Interface())
-			if err == io.EOF {
-				return cher.New(cher.BadRequest, nil, cher.New("missing_request_body", nil))
-			} else if err != nil {
-				return fmt.Errorf("crpc: json decoder error: %w", err)
-			}
-
-			inputs = []reflect.Value{ctx, req}
-		}
-
-		res := v.Call(inputs)
-
-		if err := res[len(res)-1]; !err.IsNil() {
-			return err.Interface().(error)
-		}
-
-		if len(res) == 1 {
-			w.WriteHeader(http.StatusNoContent)
-		} else if len(res) == 2 {
-			enc := json.NewEncoder(w)
-			enc.SetEscapeHTML(false)
-			err := enc.Encode(res[0].Interface())
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	}
-
 	return &WrappedFunc{
-		Handler:       hn,
 		AcceptsInput:  reqT != nil,
 		ReturnsResult: resT != nil,
+
+		function: v,
+		reqType:  reqT,
 	}, nil
 }
 
@@ -318,13 +329,17 @@ func (s *Server) Register(method, version string, schema gojsonschema.JSONLoader
 		}
 	}
 
-	s.RegisterFunc(method, version, schema, &wrapped.Handler, mw...)
+	s.RegisterFunc(method, version, schema, HandlerFunc(wrapped.ServeHTTP), mw...)
 }
 
 // RegisterFunc associates a method name and version with a HandlerFunc,
 // and optional middleware. This function is not thread safe and must be run in
 // serial if called multiple times.
 func (s *Server) RegisterFunc(method, version string, schema gojsonschema.JSONLoader, fn *HandlerFunc, mw ...MiddlewareFunc) {
+	s.RegisterValidatedFunc(method, version, schema, nil, fn, mw...)
+}
+
+func (s *Server) RegisterValidatedFunc(method, version string, reqSchema gojsonschema.JSONLoader, respSchema gojsonschema.JSONLoader, fn *HandlerFunc, mw ...MiddlewareFunc) {
 	if s.registeredVersionMethods == nil {
 		s.registeredVersionMethods = make(map[string]map[string]*handler)
 	}
