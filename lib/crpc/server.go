@@ -301,14 +301,18 @@ func isValidMethod(method, version string) bool {
 // of the input argument, Register will panic. This function is not thread safe
 // and must be run in serial if called multiple times.
 func (s *Server) Register(method, version string, schema gojsonschema.JSONLoader, fnR interface{}, mw ...MiddlewareFunc) {
+	s.RegisterValidated(method, version, schema, nil, fnR, mw...)
+}
+
+func (s *Server) RegisterValidated(method, version string, reqSchema gojsonschema.JSONLoader, respSchema gojsonschema.JSONLoader, fnR interface{}, mw ...MiddlewareFunc) {
 	if fnR == nil {
-		s.RegisterFunc(method, version, schema, nil, mw...)
+		s.RegisterFunc(method, version, reqSchema, nil, mw...)
 
 		return
 	}
 
 	wrapped := MustWrap(fnR)
-	hasSchema := schema != nil
+	hasSchema := reqSchema != nil
 
 	if wrapped.AcceptsInput != hasSchema {
 		if hasSchema {
@@ -318,7 +322,7 @@ func (s *Server) Register(method, version string, schema gojsonschema.JSONLoader
 		}
 	}
 
-	s.RegisterFunc(method, version, schema, &wrapped.Handler, mw...)
+	s.RegisterValidatedFunc(method, version, reqSchema, respSchema, &wrapped.Handler, mw...)
 }
 
 // RegisterFunc associates a method name and version with a HandlerFunc,
