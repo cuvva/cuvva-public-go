@@ -1,31 +1,37 @@
 package validation
 
-import "net/http"
+import (
+	"bytes"
+	"net/http"
+)
 
-type copyResponseWriter struct {
-	client       http.ResponseWriter
-	responseCopy *bufferedResponse
+type CopyResponseWriter struct {
+	client     http.ResponseWriter
+	StatusCode int
+	Body       *bytes.Buffer
 }
 
-func newCopyResponseWriter(client http.ResponseWriter) *copyResponseWriter {
-	return &copyResponseWriter{
-		client:       client,
-		responseCopy: newBufferedResponse(),
+func NewCopyResponseWriter(client http.ResponseWriter) *CopyResponseWriter {
+	buf := make([]byte, 0)
+
+	return &CopyResponseWriter{
+		client:     client,
+		StatusCode: http.StatusOK,
+		Body:       bytes.NewBuffer(buf),
 	}
 }
 
 // We only write headers to the client at the moment because validation doesn't care
-func (d *copyResponseWriter) Header() http.Header {
+func (d *CopyResponseWriter) Header() http.Header {
 	return d.client.Header()
 }
 
-func (d *copyResponseWriter) Write(i []byte) (int, error) {
-	_, _ = d.responseCopy.Write(i)
+func (d *CopyResponseWriter) Write(i []byte) (int, error) {
+	_, _ = d.Body.Write(i)
 	return d.client.Write(i)
 }
 
-func (d *copyResponseWriter) WriteHeader(statusCode int) {
-	d.responseCopy.WriteHeader(statusCode)
+func (d *CopyResponseWriter) WriteHeader(statusCode int) {
+	d.StatusCode = statusCode
 	d.client.WriteHeader(statusCode)
 }
-

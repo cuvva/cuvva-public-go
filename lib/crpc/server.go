@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/cuvva/cuvva-public-go/lib/crpc/validation"
 	"io"
 	"net/http"
 	"reflect"
@@ -378,13 +377,13 @@ func (s *Server) RegisterValidatedFunc(method, version string, reqSchema gojsons
 			panic(fmt.Sprintf("response schema error in %s: %s", method, err))
 		}
 
-		middleware = append(middleware, validation.ValidateResponseMiddleware(compiledSchema))
+		middleware = append(middleware, ValidateResponseMiddleware(compiledSchema))
 	}
 
 	middleware = append(middleware, mw...)
 
 	// This wraps the middleware funcs inside each one in reverse order
-	for i := range mw {
+	for i := range middleware {
 		p := mw[len(mw)-1-i](*fn)
 		fn = &p
 	}
