@@ -10,8 +10,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	urllib "net/url"
+	"strings"
 	"time"
 
+	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/cuvva/cuvva-public-go/lib/soap"
 	"github.com/cuvva/cuvva-public-go/lib/soap/wss"
 )
@@ -100,25 +102,46 @@ func (c *Client) GetConsumerData(ctx context.Context, token string, input *Input
 	}
 
 	if result.Body.Fault != nil {
-		// TODO: handle error
+		return nil, cher.New("experian_soap_fault", cher.M{
+			"full_soap_envelope": result,
+
+			"code":   result.Body.Fault.Code,
+			"string": result.Body.Fault.String,
+		})
 	}
 
 	if result.Body.Content == nil {
-		// TODO: handle missing content
+		return nil, cher.New("experian_missing_response", cher.M{
+			"full_soap_envelope": result,
+		})
 	}
 
 	output := result.Body.Content.Root.Output
 
 	if output.Error != nil {
-		// TODO: handle error
+		code := fmt.Sprintf("experian_icache_%s", strings.ToLower(output.Error.ErrorCode))
+
+		return nil, cher.New(code, cher.M{
+			"full_soap_envelope": result,
+
+			"code":     output.Error.ErrorCode,
+			"message":  output.Error.Message,
+			"severity": output.Error.Severity,
+		})
 	}
 
 	if output.OneShotFailure != nil {
-		// TODO: handle error
+		return nil, cher.New("experian_icache_failure", cher.M{
+			"full_soap_envelope": result,
+
+			"reason": output.OneShotFailure.Reason,
+		})
 	}
 
 	if output.Control == nil {
-		// TODO: handle lack of any meaningful response
+		return nil, cher.New("experian_missing_response", cher.M{
+			"full_soap_envelope": result,
+		})
 	}
 
 	return &output, nil
