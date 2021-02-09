@@ -4,13 +4,13 @@ import (
 	"encoding/xml"
 )
 
-type Interactive struct {
+type InteractiveRequest struct {
 	XMLName xml.Name `xml:"http://www.uk.experian.com/experian/wbsv/peinteractive/v100 Interactive"`
 
-	Root Root
+	Root InputRoot
 }
 
-type Root struct {
+type InputRoot struct {
 	XMLName xml.Name `xml:"http://schemas.microsoft.com/BizTalk/2003/Any Root"`
 
 	Input Input

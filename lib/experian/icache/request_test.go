@@ -104,8 +104,8 @@ func TestRequest(t *testing.T) {
 		},
 
 		Body: soap.Body{
-			Content: Interactive{
-				Root: Root{
+			Content: InteractiveRequest{
+				Root: InputRoot{
 					Input: Input{
 						Control: Control{},
 
