@@ -54,7 +54,7 @@ type Applicant struct {
 
 type ApplicantName struct {
 	Forename   string
-	MiddleName string
+	MiddleName *string
 	Surname    string
 }
 
@@ -67,19 +67,19 @@ type LocationDetails struct {
 }
 
 type LocationDetailsUKLocation struct {
-	Flat            string
-	HouseName       string
-	HouseNumber     string
-	Street          string
-	Street2         string
-	District        string
-	District2       string
-	PostTown        string
-	County          string
-	Postcode        string
-	POBox           string
-	Country         string
-	SharedLetterbox string
+	Flat            *string
+	HouseName       *string
+	HouseNumber     *string
+	Street          *string
+	Street2         *string
+	District        *string
+	District2       *string
+	PostTown        *string
+	County          *string
+	Postcode        *string
+	POBox           *string
+	Country         *string
+	SharedLetterbox *string
 }
 
 type Residency struct {

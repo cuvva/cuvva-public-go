@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cuvva/cuvva-public-go/lib/ptr"
 	"github.com/cuvva/cuvva-public-go/lib/soap"
 	"github.com/cuvva/cuvva-public-go/lib/soap/wss"
 	"github.com/stretchr/testify/assert"
@@ -36,7 +37,6 @@ var expected = `<?xml version="1.0" encoding="UTF-8"?>
 						<ApplicantIdentifier>1</ApplicantIdentifier>
 						<Name>
 							<Forename>Alan</Forename>
-							<MiddleName></MiddleName>
 							<Surname>Blagg</Surname>
 						</Name>
 						<DateOfBirth>
@@ -48,19 +48,10 @@ var expected = `<?xml version="1.0" encoding="UTF-8"?>
 					<LocationDetails xmlns="">
 						<LocationIdentifier>1</LocationIdentifier>
 						<UKLocation>
-							<Flat></Flat>
-							<HouseName></HouseName>
 							<HouseNumber>4</HouseNumber>
 							<Street>Admirals Walk</Street>
-							<Street2></Street2>
-							<District></District>
-							<District2></District2>
-							<PostTown></PostTown>
-							<County></County>
 							<Postcode>EN11 8AE</Postcode>
-							<POBox></POBox>
 							<Country>UK</Country>
-							<SharedLetterbox></SharedLetterbox>
 						</UKLocation>
 					</LocationDetails>
 					<Residency xmlns="">
@@ -133,10 +124,10 @@ func TestRequest(t *testing.T) {
 								LocationIdentifier: 1,
 
 								UKLocation: LocationDetailsUKLocation{
-									HouseNumber: "4",
-									Street:      "Admirals Walk",
-									Postcode:    "EN11 8AE",
-									Country:     "UK",
+									HouseNumber: ptr.String("4"),
+									Street:      ptr.String("Admirals Walk"),
+									Postcode:    ptr.String("EN11 8AE"),
+									Country:     ptr.String("UK"),
 								},
 							},
 						},
