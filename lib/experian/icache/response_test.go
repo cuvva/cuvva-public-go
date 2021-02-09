@@ -456,7 +456,7 @@ var responseExpected = soapEnvelope{
 				Output: Output{
 					XMLName: xml.Name{"http://schema.uk.experian.com/experian/cems/msgs/v1.1/ConsumerData", "Output"},
 
-					Control: Control{
+					Control: &Control{
 						ExperianReference:   ptr.String("6BXSSNQKN9"),
 						ClientAccountNumber: ptr.String("J6433"),
 					},

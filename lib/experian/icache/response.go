@@ -19,7 +19,7 @@ type OutputRoot struct {
 type Output struct {
 	XMLName xml.Name `xml:"http://schema.uk.experian.com/experian/cems/msgs/v1.1/ConsumerData Output"`
 
-	Control Control
+	Control *Control
 
 	OneShotFailure *OneShotFailure
 	Error          *ServiceError
