@@ -20,5 +20,15 @@ type Header struct {
 type Body struct {
 	XMLName xml.Name `xml:"http://schemas.xmlsoap.org/soap/envelope/ Body"`
 
+	Fault *Fault
+
 	Content interface{}
+}
+
+type Fault struct {
+	XMLName xml.Name `xml:"http://schemas.xmlsoap.org/soap/envelope/ Fault"`
+
+	Code   string `xml:"faultcode"`
+	String string `xml:"faultstring"`
+	Actor  string `xml:"faultactor"`
 }

@@ -447,7 +447,7 @@ var responseExpected = soapEnvelope{
 	Body: soapBody{
 		XMLName: xml.Name{"http://schemas.xmlsoap.org/soap/envelope/", "Body"},
 
-		Content: InteractiveResponse{
+		Content: &InteractiveResponse{
 			XMLName: xml.Name{"http://www.uk.experian.com/experian/wbsv/peinteractive/v100", "InteractiveResponse"},
 
 			Root: OutputRoot{

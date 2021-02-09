@@ -2,6 +2,8 @@ package icache
 
 import (
 	"encoding/xml"
+
+	"github.com/cuvva/cuvva-public-go/lib/soap"
 )
 
 // pray for Go generics 🙏
@@ -15,5 +17,7 @@ type soapEnvelope struct {
 type soapBody struct {
 	XMLName xml.Name `xml:"http://schemas.xmlsoap.org/soap/envelope/ Body"`
 
-	Content InteractiveResponse
+	Fault *soap.Fault
+
+	Content *InteractiveResponse
 }
