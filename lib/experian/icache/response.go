@@ -47,10 +47,17 @@ type BureauMatchKey struct {
 }
 
 type ConsumerSummary struct {
-	Scoring  Map `xml:"PremiumValueData>Scoring"`
-	AddrLink Map `xml:"PremiumValueData>AddrLink"`
-	AgeDOB   Map `xml:"PremiumValueData>AgeDoB"`
+	PremiumValueData ConsumerSummaryPremiumValueData
+	Summary          ConsumerSummarySummary
+}
 
-	ElectoralRoll Map `xml:"Summary>ElectoralRoll"`
-	PublicInfo    Map `xml:"Summary>PublicInfo"`
+type ConsumerSummaryPremiumValueData struct {
+	Scoring  *Map
+	AddrLink *Map
+	AgeDOB   *Map `xml:"AgeDoB"`
+}
+
+type ConsumerSummarySummary struct {
+	ElectoralRoll *Map
+	PublicInfo    *Map
 }
