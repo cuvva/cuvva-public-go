@@ -461,7 +461,7 @@ var responseExpected = soapEnvelope{
 						ClientAccountNumber: ptr.String("J6433"),
 					},
 
-					BureauMatchKey: BureauMatchKey{
+					BureauMatchKey: &BureauMatchKey{
 						MatchCategory: "04",
 					},
 
@@ -475,7 +475,7 @@ var responseExpected = soapEnvelope{
 						},
 					},
 
-					ConsumerSummary: ConsumerSummary{
+					ConsumerSummary: &ConsumerSummary{
 						Scoring: Map{
 							"NDSI22":     "DFLT6",
 							"NDSI23":     "POQID",

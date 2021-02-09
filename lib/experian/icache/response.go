@@ -19,12 +19,13 @@ type OutputRoot struct {
 type Output struct {
 	XMLName xml.Name `xml:"http://schema.uk.experian.com/experian/cems/msgs/v1.1/ConsumerData Output"`
 
-	Control        Control
-	BureauMatchKey BureauMatchKey
+	Control Control
+
+	BureauMatchKey *BureauMatchKey
 
 	Residencies []Residency `xml:"Residency"`
 
-	ConsumerSummary ConsumerSummary
+	ConsumerSummary *ConsumerSummary
 }
 
 type BureauMatchKey struct {
