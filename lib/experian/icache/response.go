@@ -52,12 +52,12 @@ type ConsumerSummary struct {
 }
 
 type ConsumerSummaryPremiumValueData struct {
-	Scoring  *Map
-	AddrLink *Map
-	AgeDOB   *Map `xml:"AgeDoB"`
+	Scoring  Map
+	AddrLink Map
+	AgeDOB   Map `xml:"AgeDoB"`
 }
 
 type ConsumerSummarySummary struct {
-	ElectoralRoll *Map
-	PublicInfo    *Map
+	ElectoralRoll Map
+	PublicInfo    Map
 }
