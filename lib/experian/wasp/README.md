@@ -29,7 +29,7 @@ client, err := wasp.NewClient(baseURL, cert, key)
 token, err := client.Login(context.Background(), "test")
 ```
 
-The resulting token can be used with other Experian services. These tokens do stop working (through expiry, revocation, replacement etc), however there is no way to know when this will happen.
+The resulting token can be used with other Experian services. These tokens do stop working (through expiry, revocation, replacement etc). Speculatively, it appears they may last for 9 hours, but there is no way to know this for sure.
 
 If the Experian service you are calling indicates the auth token is not valid, you should run the WASP login process again. If attempting the request 1-2 times more with new tokens does not work, you should not keep trying forever.
 
