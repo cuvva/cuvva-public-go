@@ -2,7 +2,7 @@
 
 Experian's "iCache" system provides access to more personal financial data than any one company should hold(!), which is very good for risk rating etc.
 
-Authenticated using their "WASP" system - see the wasp lib for that.
+Authenticated using their "WASP" system - see the wasp package for that.
 
 ## Usage
 
