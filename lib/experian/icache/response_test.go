@@ -506,7 +506,6 @@ var responseExpected = soapEnvelope{
 						},
 
 						Summary: ConsumerSummarySummary{
-
 							ElectoralRoll: Map{
 								"E4Q01":     "4",
 								"E4Q02":     "4",
