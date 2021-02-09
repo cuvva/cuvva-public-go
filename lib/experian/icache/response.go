@@ -21,11 +21,25 @@ type Output struct {
 
 	Control Control
 
+	OneShotFailure *OneShotFailure
+	Error          *ServiceError
+
 	BureauMatchKey *BureauMatchKey
 
 	Residencies []Residency `xml:"Residency"`
 
 	ConsumerSummary *ConsumerSummary
+}
+
+type OneShotFailure struct {
+	FailedLocation int
+	Reason         string
+}
+
+type ServiceError struct {
+	ErrorCode string
+	Message   string
+	Severity  int
 }
 
 type BureauMatchKey struct {
