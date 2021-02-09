@@ -21,6 +21,15 @@ Based on the WSDL at https://dfi.uk.experian.com/DelphiForQuotations/Interactive
 
 ## Notes
 
-Deprecated fields are currently excluded in the response unmarshalling.
+Request marshalling currently only includes the basic structures Cuvva needs.
 
-Fields Cuvva can't currently use (e.g. CIAS, CUE, CIFAS fields etc) are not yet included in the response unmarshalling.
+Response unmarshalling currently excludes:
+
+- legacy/deprecated fields (e.g. Mosaic)
+- defaulted/unavailable fields (e.g. CIFAS)
+- future functionality fields (e.g. director)
+- fields which repeat back inputs without anything particularly useful added
+- support for generic extensions (hosted data & spare fields)
+- fields which Cuvva can't currently use (e.g. vehicle, CUE, commercial)
+
+We'd consider accepting PRs adding support for most use-cases, aside from legacy/deprecated and consistently defaulted/unavailable fields.
