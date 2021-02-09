@@ -23,11 +23,7 @@ var expected = `<?xml version="1.0" encoding="UTF-8"?>
 		<Interactive xmlns="http://www.uk.experian.com/experian/wbsv/peinteractive/v100">
 			<Root xmlns="http://schemas.microsoft.com/BizTalk/2003/Any">
 				<Input xmlns="http://schema.uk.experian.com/experian/cems/msgs/v1.1/ConsumerData">
-					<Control xmlns="">
-						<ClientAccountNumber></ClientAccountNumber>
-						<ClientBranchNumber></ClientBranchNumber>
-						<UserIdentity></UserIdentity>
-					</Control>
+					<Control xmlns=""></Control>
 					<Application xmlns="">
 						<ApplicationType>QI</ApplicationType>
 					</Application>

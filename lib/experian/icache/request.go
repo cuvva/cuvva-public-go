@@ -28,14 +28,6 @@ type Input struct {
 	Residencies []Residency       `xml:"Residency"`
 }
 
-type Control struct {
-	XMLNS string `xml:"xmlns,attr"`
-
-	ClientAccountNumber string
-	ClientBranchNumber  string
-	UserIdentity        string
-}
-
 type Application struct {
 	XMLNS string `xml:"xmlns,attr"`
 
