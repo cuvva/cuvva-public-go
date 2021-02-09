@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var expected = `<?xml version="1.0" encoding="UTF-8"?>
+var requestExpected = `<?xml version="1.0" encoding="UTF-8"?>
 <Envelope xmlns="http://schemas.xmlsoap.org/soap/envelope/">
 	<Header xmlns="http://schemas.xmlsoap.org/soap/envelope/">
 		<Security xmlns="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
@@ -153,6 +153,6 @@ func TestRequest(t *testing.T) {
 	if assert.NoError(t, err) {
 		res := fmt.Sprintf("%s%s", xml.Header, data)
 
-		assert.Equal(t, expected, res)
+		assert.Equal(t, requestExpected, res)
 	}
 }
