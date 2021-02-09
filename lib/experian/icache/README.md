@@ -18,3 +18,9 @@ Based on the WSDL at https://dfi.uk.experian.com/DelphiForQuotations/Interactive
 - a big spreadsheet called "iCache Data Definition Document" (we have v7.4)
 - a doc called "iCache Quick Start Guide" (we have v1.7)
 - an example SOAP request & response (see the tests, which are roughly equivalent)
+
+## Notes
+
+Deprecated fields are currently excluded in the response unmarshalling.
+
+Fields Cuvva can't currently use (e.g. CIAS, CUE, CIFAS fields etc) are not yet included in the response unmarshalling.
