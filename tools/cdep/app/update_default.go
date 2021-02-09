@@ -153,7 +153,7 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 
 	commitMessage := fmt.Sprintf("cdep: %s", req.String("update-default"))
 
-	if !a.DryRun && req.Environment == "prod" {
+	if !a.DryRun && req.System == "prod" {
 		textTemplate := ":wrench: *command*: `%s`\n:technologist: *user*: `%s`"
 		text := fmt.Sprintf(textTemplate, req.String("update"), strings.Split(string(user), "\n")[0])
 		if req.Message != "" {

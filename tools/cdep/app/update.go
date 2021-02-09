@@ -167,7 +167,7 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 
 	commitMessage := fmt.Sprintf("cdep: %s", req.String("update"))
 
-	if !a.DryRun && req.Environment == "prod" {
+	if !a.DryRun && req.System == "prod" {
 		textTemplate := ":wrench: *command*: `%s`\n:technologist: *user*: `%s`"
 		text := fmt.Sprintf(textTemplate, req.String("update"), strings.Split(string(user), "\n")[0])
 		if req.Message != "" {
