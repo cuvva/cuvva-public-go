@@ -106,42 +106,36 @@ func TestRequest(t *testing.T) {
 							HHOAllowed:      false,
 						},
 
-						Applicants: []Applicant{
-							{
-								ApplicantIdentifier: 1,
+						Applicant: Applicant{
+							ApplicantIdentifier: 1,
 
-								Name: ApplicantName{
-									Forename: "Alan",
-									Surname:  "Blagg",
-								},
+							Name: ApplicantName{
+								Forename: "Alan",
+								Surname:  "Blagg",
+							},
 
-								DateOfBirth: Date{1970, 8, 19},
+							DateOfBirth: Date{1970, 8, 19},
+						},
+
+						LocationDetails: LocationDetails{
+							LocationIdentifier: 1,
+
+							UKLocation: LocationDetailsUKLocation{
+								HouseNumber: ptr.String("4"),
+								Street:      ptr.String("Admirals Walk"),
+								Postcode:    ptr.String("EN11 8AE"),
+								Country:     ptr.String("UK"),
 							},
 						},
 
-						Locations: []LocationDetails{
-							{
-								LocationIdentifier: 1,
+						Residency: Residency{
+							ApplicantIdentifier: 1,
+							LocationIdentifier:  1,
 
-								UKLocation: LocationDetailsUKLocation{
-									HouseNumber: ptr.String("4"),
-									Street:      ptr.String("Admirals Walk"),
-									Postcode:    ptr.String("EN11 8AE"),
-									Country:     ptr.String("UK"),
-								},
-							},
-						},
+							LocationCode: "01",
 
-						Residencies: []Residency{
-							{
-								ApplicantIdentifier: 1,
-								LocationIdentifier:  1,
-
-								LocationCode: "01",
-
-								ResidencyDateFrom: NewDate(now),
-								ResidencyDateTo:   NewDate(now),
-							},
+							ResidencyDateFrom: NewDate(now),
+							ResidencyDateTo:   NewDate(now),
 						},
 					},
 				},

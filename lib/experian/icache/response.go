@@ -26,7 +26,7 @@ type Output struct {
 
 	BureauMatchKey *BureauMatchKey
 
-	Residencies []Residency `xml:"Residency"`
+	Residency *Residency
 
 	ConsumerSummary *ConsumerSummary
 }

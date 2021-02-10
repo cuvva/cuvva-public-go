@@ -23,9 +23,9 @@ type Input struct {
 	Application    Application
 	ThirdPartyData ThirdPartyData
 
-	Applicants  []Applicant       `xml:"Applicant"`
-	Locations   []LocationDetails `xml:"LocationDetails"`
-	Residencies []Residency       `xml:"Residency"`
+	Applicant       Applicant
+	LocationDetails LocationDetails
+	Residency       Residency
 }
 
 type Application struct {

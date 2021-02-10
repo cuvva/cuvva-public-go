@@ -465,14 +465,12 @@ var responseExpected = soapEnvelope{
 						MatchCategory: "04",
 					},
 
-					Residencies: []Residency{
-						{
-							ApplicantIdentifier: 1,
-							LocationIdentifier:  1,
-							LocationCode:        "01",
-							ResidencyDateFrom:   Date{2015, 1, 22},
-							ResidencyDateTo:     Date{2015, 9, 30},
-						},
+					Residency: &Residency{
+						ApplicantIdentifier: 1,
+						LocationIdentifier:  1,
+						LocationCode:        "01",
+						ResidencyDateFrom:   Date{2015, 1, 22},
+						ResidencyDateTo:     Date{2015, 9, 30},
 					},
 
 					ConsumerSummary: &ConsumerSummary{
