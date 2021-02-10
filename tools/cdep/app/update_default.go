@@ -145,6 +145,10 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 
 	commitMessage := fmt.Sprintf("cdep: %s", req.String("update-default"))
 
+	if err := a.PublishToSlack(ctx, req, commitMessage, updatedFiles, repoPath); err != nil {
+		return err
+	}
+
 	if a.DryRun {
 		log.Info("Dry run only, stopping now")
 		log.Infof("commit message (%s)\n", commitMessage)
