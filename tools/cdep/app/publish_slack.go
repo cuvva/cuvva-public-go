@@ -13,7 +13,6 @@ import (
 )
 
 func (a App) PublishToSlack(ctx context.Context, req *parsers.Params, commitMessage string, updatedFiles []string, repoPath string) error {
-
 	user, err := exec.CommandContext(ctx, "git", "config", "user.name").Output()
 	if err != nil {
 		fmt.Println(string(user))
