@@ -8,11 +8,8 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
-	"strings"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/cuvva/cuvva-public-go/lib/config"
 	"github.com/cuvva/cuvva-public-go/lib/ptr"
@@ -159,31 +156,10 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 		return cher.New("nothing_changed", nil)
 	}
 
-	user, err := exec.CommandContext(ctx, "git", "config", "user.name").Output()
-	if err != nil {
-		fmt.Println(string(user))
-		return err
-	}
-
 	commitMessage := fmt.Sprintf("cdep: %s", req.String("update"))
 
-	if !a.DryRun && req.System == "prod" {
-		textTemplate := ":wrench: *command*: `%s`\n:technologist: *user*: `%s`"
-		text := fmt.Sprintf(textTemplate, req.String("update"), strings.Split(string(user), "\n")[0])
-		if req.Message != "" {
-			text = text + fmt.Sprintf("\n\n:email: *message*: `%s`", req.Message)
-		}
-
-		arn := "arn:aws:sns:eu-west-1:005717268539:cuvva-deployments-prod"
-		subject := "A prod deployment is happening"
-		_, err := a.SNS.PublishWithContext(ctx, &sns.PublishInput{
-			TopicArn: &arn,
-			Subject:  &subject,
-			Message:  &text,
-		})
-		if err, ok := err.(awserr.Error); !ok || err.Code() != "EndpointDisabled" {
-			fmt.Println(err)
-		}
+	if err := a.PublishToSlack(ctx, req, commitMessage, updatedFiles, repoPath); err != nil {
+		return err
 	}
 
 	if a.DryRun {
