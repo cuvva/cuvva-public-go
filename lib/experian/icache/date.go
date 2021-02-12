@@ -19,3 +19,7 @@ func NewDate(t time.Time) Date {
 func (d Date) Time(loc *time.Location) time.Time {
 	return time.Date(d.Year, d.Month, d.Day, 0, 0, 0, 0, loc)
 }
+
+func (d Date) String() string {
+	return d.Time(time.UTC).Format("2006-01-02")
+}
