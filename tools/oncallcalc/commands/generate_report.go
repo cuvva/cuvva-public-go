@@ -1,11 +1,13 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"time"
 
 	"github.com/cuvva/cuvva-public-go/tools/oncallcalc/app"
 	"github.com/cuvva/cuvva-public-go/tools/oncallcalc/config"
+	"github.com/cuvva/cuvva-public-go/tools/oncallcalc/lib/govuk"
 	"github.com/spf13/cobra"
 )
 
@@ -31,7 +33,13 @@ var GenerateReportCmd = &cobra.Command{
 			return err
 		}
 
-		app := app.New(client)
+		govUK := govuk.New()
+
+		app := app.New(client, govUK)
+
+		if err := app.GetBankHolidays(context.Background()); err != nil {
+			return err
+		}
 
 		timeIn, err := convMonthToMonth(TimeIn)
 		if err != nil {
