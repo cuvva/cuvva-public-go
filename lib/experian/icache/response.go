@@ -5,19 +5,19 @@ import (
 )
 
 type InteractiveResponse struct {
-	XMLName xml.Name `xml:"http://www.uk.experian.com/experian/wbsv/peinteractive/v100 InteractiveResponse"`
+	XMLName xml.Name `json:"-" xml:"http://www.uk.experian.com/experian/wbsv/peinteractive/v100 InteractiveResponse"`
 
 	Root OutputRoot
 }
 
 type OutputRoot struct {
-	XMLName xml.Name `xml:"http://schemas.microsoft.com/BizTalk/2003/Any OutputRoot"`
+	XMLName xml.Name `json:"-" xml:"http://schemas.microsoft.com/BizTalk/2003/Any OutputRoot"`
 
 	Output Output
 }
 
 type Output struct {
-	XMLName xml.Name `xml:"http://schema.uk.experian.com/experian/cems/msgs/v1.1/ConsumerData Output"`
+	XMLName xml.Name `json:"-" xml:"http://schema.uk.experian.com/experian/cems/msgs/v1.1/ConsumerData Output"`
 
 	Control *Control
 
