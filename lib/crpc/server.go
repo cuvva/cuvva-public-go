@@ -9,9 +9,11 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
+	"strings"
+
+	"github.com/cuvva/cuvva-public-go/lib/clog"
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
-	"github.com/cuvva/cuvva-public-go/lib/crpc/validation"
 	"github.com/xeipuuv/gojsonschema"
 )
 
@@ -78,16 +80,60 @@ type MiddlewareFunc func(next HandlerFunc) HandlerFunc
 // WrappedFunc contains the wrapped handler, and some additional information
 // about the function that was determined during the reflection process
 type WrappedFunc struct {
-	AcceptsInput  bool
-	ReturnsResult bool
-
-	function          reflect.Value
-	reqType           reflect.Type
-	responseInspector func(interface{})
+	function reflect.Value
+	reqType  reflect.Type
+	resType  reflect.Type
 }
 
 var errorType = reflect.TypeOf((*error)(nil)).Elem()
 var contextType = reflect.TypeOf((*context.Context)(nil)).Elem()
+
+func (f *WrappedFunc) AcceptsInput() bool {
+	return f.reqType != nil
+}
+
+func (f *WrappedFunc) WithResponseValidation(schema gojsonschema.JSONLoader) *WrappedFunc {
+	if f.resType == nil {
+		panic("cannot add response schema validation if there is no result returned")
+	}
+
+	compiledSchema, err := gojsonschema.NewSchemaLoader().Compile(schema)
+	if err != nil {
+		panic(fmt.Sprintf("json schema error: %s", err))
+	}
+
+	f.function = reflect.MakeFunc(f.function.Type(), ValidateResponseRPCMiddleware(compiledSchema, f.function))
+
+	return f
+}
+
+func ValidateResponseRPCMiddleware(schema *gojsonschema.Schema, next reflect.Value) func(input []reflect.Value) []reflect.Value {
+	return func(input []reflect.Value) []reflect.Value {
+		ctx, _ := input[0].Interface().(context.Context)
+		output := next.Call(input)
+		if !output[0].IsNil() {
+			res, err := schema.Validate(gojsonschema.NewGoLoader(output[0].Interface()))
+			if err != nil {
+				clog.Get(ctx).WithError(err).Warn("crpc failed to validate response")
+			}
+
+			if !res.Valid() {
+				vErr := fmt.Errorf(GetValidationErrorsAsString(res))
+				clog.Get(ctx).WithError(vErr).Warn("crpc response does not fulfil schema")
+			}
+		}
+
+		return output
+	}
+}
+
+func GetValidationErrorsAsString(result *gojsonschema.Result) string {
+	detail := make([]string, 0)
+	for _, vErr := range result.Errors() {
+		detail = append(detail, vErr.String())
+	}
+	return strings.Join(detail, ", ")
+}
 
 func (f *WrappedFunc) ServeHTTP(w http.ResponseWriter, r *Request) error {
 	ctx := reflect.ValueOf(r.Context())
@@ -130,9 +176,6 @@ func (f *WrappedFunc) ServeHTTP(w http.ResponseWriter, r *Request) error {
 		enc := json.NewEncoder(w)
 		enc.SetEscapeHTML(false)
 		out := res[0].Interface()
-		if f.responseInspector != nil {
-			f.responseInspector(out)
-		}
 
 		err := enc.Encode(out)
 		if err != nil {
@@ -201,11 +244,9 @@ func Wrap(fn interface{}) (*WrappedFunc, error) {
 	}
 
 	return &WrappedFunc{
-		AcceptsInput:  reqT != nil,
-		ReturnsResult: resT != nil,
-
 		function: v,
 		reqType:  reqT,
+		resType:  resT,
 	}, nil
 }
 
@@ -311,17 +352,11 @@ func isValidMethod(method, version string) bool {
 // defined above, or the presence of the schema doesn't match the presence
 // of the input argument, Register will panic. This function is not thread safe
 // and must be run in serial if called multiple times.
-func (s *Server) Register(method, version string, schema gojsonschema.JSONLoader, fnR interface{}, mw ...MiddlewareFunc) {
-	if fnR == nil {
-		s.RegisterFunc(method, version, schema, nil, mw...)
-
-		return
-	}
-
+func (s *Server) Register(method, version string, schema gojsonschema.JSONLoader, fnR interface{}, mw ...MiddlewareFunc) *WrappedFunc {
 	wrapped := MustWrap(fnR)
 	hasSchema := schema != nil
 
-	if wrapped.AcceptsInput != hasSchema {
+	if wrapped.AcceptsInput() != hasSchema {
 		if hasSchema {
 			panic("schema validation configured, but handler doesn't accept input")
 		} else {
@@ -329,17 +364,20 @@ func (s *Server) Register(method, version string, schema gojsonschema.JSONLoader
 		}
 	}
 
-	s.RegisterFunc(method, version, schema, HandlerFunc(wrapped.ServeHTTP), mw...)
+	handler := HandlerFunc(wrapped.ServeHTTP)
+	s.RegisterFunc(method, version, schema, &handler, mw...)
+
+	return wrapped
 }
 
 // RegisterFunc associates a method name and version with a HandlerFunc,
 // and optional middleware. This function is not thread safe and must be run in
 // serial if called multiple times.
 func (s *Server) RegisterFunc(method, version string, schema gojsonschema.JSONLoader, fn *HandlerFunc, mw ...MiddlewareFunc) {
-	s.RegisterValidatedFunc(method, version, schema, nil, fn, mw...)
-}
+	if fn == nil {
+		panic("handler cannot be nil")
+	}
 
-func (s *Server) RegisterValidatedFunc(method, version string, reqSchema gojsonschema.JSONLoader, respSchema gojsonschema.JSONLoader, fn *HandlerFunc, mw ...MiddlewareFunc) {
 	if s.registeredVersionMethods == nil {
 		s.registeredVersionMethods = make(map[string]map[string]*handler)
 	}
@@ -348,52 +386,39 @@ func (s *Server) RegisterValidatedFunc(method, version string, reqSchema gojsons
 		s.registeredPreviewMethods = make(map[string]*handler)
 	}
 
-	if fn == nil && schema != nil {
-		panic("schema validation configured, but handler is nil")
-	}
-
 	if !isValidMethod(method, version) {
 		panic("invalid method/version")
 	} else if s.AuthenticationMiddleware == nil {
 		panic("no authentication configured")
 	}
 
-	if fn == nil && version == VersionPreview {
-		panic(fmt.Sprintf("cannot set preview method '%s' as nil", method))
-	}
-
 	if s.isRouteDefined(method, version) {
 		panic(fmt.Sprintf("cannot set '%s' on version '%s', it's already defined", method, version))
 	}
 
-	if fn == nil {
-		s.setRoute(version, method, nil)
+	if schema != nil {
+		compiledSchema, err := gojsonschema.NewSchemaLoader().Compile(schema)
+		if err != nil {
+			panic(fmt.Sprintf("json schema error in %s: %s", method, err))
+		}
+
+		mw = append([]MiddlewareFunc{s.AuthenticationMiddleware, Validate(compiledSchema)}, mw...)
 	} else {
-		if schema != nil {
-			compiledSchema, err := gojsonschema.NewSchemaLoader().Compile(schema)
-			if err != nil {
-				panic(fmt.Sprintf("json schema error in %s: %s", method, err))
-			}
-
-			mw = append([]MiddlewareFunc{s.AuthenticationMiddleware, Validate(compiledSchema)}, mw...)
-		} else {
-			mw = append([]MiddlewareFunc{s.AuthenticationMiddleware}, mw...)
-		}
-
-		// This wraps the middleware funcs inside each one in reverse order
-		for i := range mw {
-			p := mw[len(mw)-1-i](*fn)
-			fn = &p
-		}
-
-		for i := range s.mw {
-			p := s.mw[len(s.mw)-1-i](*fn)
-			fn = &p
-		}
-
-		s.setRoute(version, method, &handler{version, *fn})
+		mw = append([]MiddlewareFunc{s.AuthenticationMiddleware}, mw...)
 	}
 
+	// This wraps the middleware funcs inside each one in reverse order
+	for i := range mw {
+		p := mw[len(mw)-1-i](*fn)
+		fn = &p
+	}
+
+	for i := range s.mw {
+		p := s.mw[len(s.mw)-1-i](*fn)
+		fn = &p
+	}
+
+	s.setRoute(version, method, &handler{version, *fn})
 	s.buildRoutes()
 }
 
