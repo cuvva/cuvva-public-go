@@ -1,7 +1,7 @@
 package icache
 
 type Control struct {
-	XMLNS string `xml:"xmlns,attr"`
+	XMLNS string `json:"-" xml:"xmlns,attr"`
 
 	ExperianReference   *string
 	ClientAccountNumber *string
@@ -10,7 +10,7 @@ type Control struct {
 }
 
 type ThirdPartyData struct {
-	XMLNS string `xml:"xmlns,attr"`
+	XMLNS string `json:"-" xml:"xmlns,attr"`
 
 	OptOut          Bool
 	TransientAssocs Bool
@@ -18,7 +18,7 @@ type ThirdPartyData struct {
 }
 
 type Applicant struct {
-	XMLNS string `xml:"xmlns,attr"`
+	XMLNS string `json:"-" xml:"xmlns,attr"`
 
 	ApplicantIdentifier int
 
@@ -34,7 +34,7 @@ type ApplicantName struct {
 }
 
 type LocationDetails struct {
-	XMLNS string `xml:"xmlns,attr"`
+	XMLNS string `json:"-" xml:"xmlns,attr"`
 
 	LocationIdentifier int
 
@@ -58,7 +58,7 @@ type LocationDetailsUKLocation struct {
 }
 
 type Residency struct {
-	XMLNS string `xml:"xmlns,attr"`
+	XMLNS string `json:"-" xml:"xmlns,attr"`
 
 	ApplicantIdentifier int
 	LocationIdentifier  int
