@@ -35,9 +35,12 @@ func (a *App) GenerateRota(scheduleID string, year int, month time.Month) (oncal
 			return nil, rota, fmt.Errorf("%s is missing from the rota", shift.Email)
 		}
 
-		if isWeekend(shift.Date) {
+		switch {
+		case a.isBankholiday(shift.Date):
+			v.Bankholidays += 0.5
+		case isWeekend(shift.Date):
 			v.Weekends += 0.5
-		} else {
+		default:
 			v.Weekdays += 0.5
 		}
 	}

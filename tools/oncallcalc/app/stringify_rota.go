@@ -12,15 +12,16 @@ func (a *App) StringifyRota(rota oncallcalc.Rota) string {
 
 	for e, s := range rota {
 		out += fmt.Sprintf("%s\n", e)
-		out += fmt.Sprintf("\tDay count (wd/we): (%.1f, %.1f)\n", s.Weekdays, s.Weekends)
+		out += fmt.Sprintf("\tDay count (wd/we/bh): (%.1f, %.1f, %.1f)\n", s.Weekdays, s.Weekends, s.Bankholidays)
 
+		bankholidayMoney := s.Bankholidays * oncallcalc.WeekendPayout
 		weekdayMoney := s.Weekdays * oncallcalc.WeekdayPayout
 		weekendMoney := s.Weekends * oncallcalc.WeekendPayout
-		total += weekendMoney + weekdayMoney
+		total += weekendMoney + weekdayMoney + bankholidayMoney
 
-		out += fmt.Sprintf("\tWeekday money (wd/we): (%.2f, %.2f)\n", weekdayMoney, weekendMoney)
+		out += fmt.Sprintf("\tPayout (wd/we/bh): (%.2f, %.2f, %.2f)\n", weekdayMoney, weekendMoney, bankholidayMoney)
 
-		out += fmt.Sprintf("\tTotal: £%.2f\n\n", weekdayMoney+weekendMoney)
+		out += fmt.Sprintf("\tTotal: £%.2f\n\n", weekdayMoney+weekendMoney+bankholidayMoney)
 	}
 
 	out += fmt.Sprintf("Total: £%.2f\n", total)
