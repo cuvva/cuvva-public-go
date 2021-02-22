@@ -7,7 +7,7 @@ require (
 	github.com/PagerDuty/go-pagerduty v1.3.0
 	github.com/aws/aws-sdk-go v1.37.15
 	github.com/blang/semver v3.5.1+incompatible
-	github.com/go-chi/chi v1.5.2
+	github.com/go-chi/chi v1.5.3
 	github.com/go-git/go-billy/v5 v5.0.0
 	github.com/go-git/go-git/v5 v5.2.0
 	github.com/go-redis/redis v6.15.9+incompatible
