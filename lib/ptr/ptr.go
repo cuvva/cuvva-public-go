@@ -1,5 +1,9 @@
 package ptr
 
+import (
+	"time"
+)
+
 func String(v string) *string {
 	return &v
 }
@@ -13,5 +17,9 @@ func Int(v int) *int {
 }
 
 func Float64(v float64) *float64 {
+	return &v
+}
+
+func Time(v time.Time) *time.Time {
 	return &v
 }
