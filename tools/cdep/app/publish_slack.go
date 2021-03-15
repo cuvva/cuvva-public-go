@@ -33,8 +33,10 @@ func (a App) PublishToSlack(ctx context.Context, req *parsers.Params, commitMess
 			Subject:  &subject,
 			Message:  &text,
 		})
-		if err, ok := err.(awserr.Error); !ok || err.Code() != "EndpointDisabled" {
-			fmt.Println(err)
+		if err != nil {
+			if err, ok := err.(awserr.Error); !ok || err.Code() != "EndpointDisabled" {
+				fmt.Println(err)
+			}
 		}
 	}
 
