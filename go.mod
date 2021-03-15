@@ -13,7 +13,7 @@ require (
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/hashicorp/go-tfe v0.12.1
 	github.com/jamescun/basex v0.0.0-20180407124237-e1bcb39ab18e
-	github.com/lib/pq v1.9.0
+	github.com/lib/pq v1.10.0
 	github.com/onsi/ginkgo v1.14.2 // indirect
 	github.com/onsi/gomega v1.10.4 // indirect
 	github.com/pborman/uuid v1.2.1 // indirect
