@@ -8,20 +8,6 @@ import (
 	"github.com/cuvva/cuvva-public-go/lib/postcodesio"
 )
 
-// TestSvc checks if the client and fallback client conform to the same interface
-func TestSvc(t *testing.T) {
-	var client postcodesio.Service = &postcodesio.Client{}
-	var fallbackClient postcodesio.Service = &postcodesio.Client{}
-
-	if client == nil {
-		t.Error("postcodesio client does not conform to postcodes service interface")
-	}
-
-	if fallbackClient == nil {
-		t.Error("postcodesio fallback client does not conform to postcodes service interface")
-	}
-}
-
 // TestFallbackReverseGeocode tests if given two clients, the first of which
 // will error that it will retrieve a response
 func TestFallbackReverseGeocode(t *testing.T) {
