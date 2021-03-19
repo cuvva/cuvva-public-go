@@ -115,3 +115,9 @@ func (fc *FailoverClient) ReverseGeocode(ctx context.Context, latitude, longitud
 		"longitude": longitude,
 	}, errors...)
 }
+
+// interface guards
+var (
+	_ Service = (*Client)(nil)
+	_ Service = (*FailoverClient)(nil)
+)
