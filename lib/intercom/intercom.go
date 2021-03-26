@@ -44,3 +44,14 @@ func (svc *Client) SendEvent(userID, eventName string, metadata map[string]inter
 		Metadata:  metadata,
 	})
 }
+
+// SaveUser accepts a UserID and CustomAttributes and forwards the request to Intercom
+// Intercom will create or update the user
+func (svc *Client) SaveUser(userID string, customAttributes map[string]interface{}) error {
+	_, err := svc.intercomSDK.Users.Save(&intercomSDK.User{
+		UserID:           userID,
+		CustomAttributes: customAttributes,
+	})
+
+	return err
+}
