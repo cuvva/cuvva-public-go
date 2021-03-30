@@ -5,7 +5,7 @@ go 1.16
 require (
 	github.com/Masterminds/squirrel v1.5.0
 	github.com/PagerDuty/go-pagerduty v1.3.0
-	github.com/aws/aws-sdk-go v1.38.3
+	github.com/aws/aws-sdk-go v1.38.8
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/go-chi/chi v1.5.4
 	github.com/go-git/go-billy/v5 v5.0.0
