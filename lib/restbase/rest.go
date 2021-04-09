@@ -2,7 +2,9 @@ package restbase
 
 import (
 	"context"
+	"io"
 	"net/http"
+	"strings"
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/cuvva/cuvva-public-go/lib/clog"
@@ -52,6 +54,15 @@ func Wrap(fn func(context.Context, *http.Request) (interface{}, error)) func(htt
 
 		res, err := fn(ctx, r)
 		if err != nil {
+			// rewrite common errors to internal error standard
+			if err == io.EOF {
+				err = cher.New(cher.EOF, nil)
+			} else if err == io.ErrUnexpectedEOF {
+				err = cher.New(cher.UnexpectedEOF, nil)
+			} else if strings.Contains(err.Error(), context.Canceled.Error()) {
+				err = cher.New(cher.ContextCanceled, nil)
+			}
+
 			ErrorHandler(ctx, w, err)
 			return
 		}
