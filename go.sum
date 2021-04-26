@@ -19,8 +19,8 @@ github.com/Microsoft/go-winio v0.4.14/go.mod h1:qXqCSQ3Xa7+6tgxaGTIe4Kpcdsi+P8jB
 github.com/Microsoft/go-winio v0.4.16 h1:FtSW/jqD+l4ba5iPBj9CODVtgfYAD8w2wS923g/cFDk=
 github.com/Microsoft/go-winio v0.4.16/go.mod h1:XB6nPKklQyQ7GC9LdcBEcBl8PF76WugXOPRXwdLnMv0=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
-github.com/PagerDuty/go-pagerduty v1.3.0 h1:2vWajLxpmGeP8pmsyZ0MjFneHa8ASJrztJRSe3FNOzg=
-github.com/PagerDuty/go-pagerduty v1.3.0/go.mod h1:W5hSIIPrzSgAkNBDiuymWN5g9yQVzimL7BUBL44f3RY=
+github.com/PagerDuty/go-pagerduty v1.4.0 h1:1ju+FZt47dLsm9iDU6eMymbr1TeqHmpSRU27pJ+LwQ4=
+github.com/PagerDuty/go-pagerduty v1.4.0/go.mod h1:W5hSIIPrzSgAkNBDiuymWN5g9yQVzimL7BUBL44f3RY=
 github.com/alcortesm/tgz v0.0.0-20161220082320-9c5fe88206d7 h1:uSoVVbwJiQipAclBbw+8quDsfcvFjOpI5iCf4p/cqCs=
 github.com/alcortesm/tgz v0.0.0-20161220082320-9c5fe88206d7/go.mod h1:6zEj6s6u/ghQa61ZWa/C2Aw3RkjiTBOix7dkqa1VLIs=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
