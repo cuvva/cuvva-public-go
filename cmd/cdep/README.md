@@ -9,7 +9,7 @@
 
 ### update
 
-A CLI tool to deploy things to a specific environment. Covers boths services maintained by rancher and lambdas handled by AWS.
+A CLI tool to deploy things to a specific environment. Covers both orchestrated services and lambdas handled by AWS.
 
 This tool is designed to speed up quick day-to-day updates, and is not meant to be all encompassing.
 
