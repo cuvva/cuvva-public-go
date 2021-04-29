@@ -2,14 +2,14 @@
 
 ksuid is a Go library that generated prefixed, k-sorted globally unique identifiers.
 
-Each ksuid has a resource type and optionally an environment prefix (no environment prefix is for production use only). They are roughly sortable down to per-second resolution.
+Each KSUID has a resource type and optionally an environment prefix (no environment prefix is for prod use only). They are roughly sortable down to per-second resolution.
 
-Properties of a ksuid:
+Properties of a KSUID:
 
-  - resource type and environment prefixing
-  - lexicographically, time sortable
-  - no startup co-ordination
-  - guaranteed unique relative to process/machine
+- resource type and environment prefixing
+- lexicographically, time sortable
+- no startup co-ordination
+- guaranteed unique relative to process/machine
 
 ## Usage
 
@@ -17,68 +17,83 @@ Properties of a ksuid:
 
 ksuid is primarily a Go package to be consumed by Cuvva services, below are examples of its API usage.
 
-To generate a ksuid with a custom resource type and for the production environment:
+To generate a KSUID with a custom resource type and for the prod environment:
 
 ```go
 id := ksuid.Generate("user")
 /* => ID{
 	Environment: "prod",
 	Resource: "user",
-	Timestamp: time.Time{"2018-03-05T15:03:52Z"},
-	MachineID: net.HardwareAddr{"78:4f:43:84:fd:b8"},
-	ProcessID: 39089,
-	SequenceID: 1,
+	Timestamp: time.Time{"2021-04-29T10:46:56Z"},
+	MachineID: net.HardwareAddr{"1e:00:a2:3e:53:90"},
+	ProcessID: 21124,
+	SequenceID: 0,
 } */
 ```
 
-To parse a single given ksuid:
+To parse a single given KSUID:
 
 ```go
-id, err := ksuid.Parse([]byte("user_0EoZhc2lK5BSLogCVb7UYL"))
+id, err := ksuid.Parse([]byte("user_000000C8BhY47NRDD94E5VZxVX4bo"))
 /*
 => ID{
 	Environment: "prod",
 	Resource: "user",
-	Timestamp: time.Time{"2018-03-05T15:03:52Z"},
-	MachineID: net.HardwareAddr{"78:4f:43:84:fd:b8"},
-	ProcessID: 39089,
-	SequenceID: 1,
+	Timestamp: time.Time{"2021-04-29T10:46:56Z"},
+	MachineID: net.HardwareAddr{"1e:00:a2:3e:53:90"},
+	ProcessID: 21124,
+	SequenceID: 0,
 }, nil
 */
 ```
 
-### Command Line Tool
+### CLI
 
-ksuid provides a helper utility to generate and parse ksuid on the command line, it contains two subcommands: `parse` and `generate`.
+ksuid provides a helper utility to generate and parse KSUID on the command line, it contains two subcommands: `parse` and `generate`.
 
-To generate two ksuid with a custom resource type and for the production environment:
+To generate two KSUID with a custom resource type and for the prod environment:
 
 ```sh
 $ ksuid generate --resource=user --count=2
-user_0EoZhc2lK5BSLogCVb7UYL
-user_0EoZhc2lK5BSLogCVb7UYM
+user_000000C8BhY47NRDD94E5VZxVX4bo
+user_000000C8BhY47NRDD94E5VZxVX4bp
 ```
 
-To parse a single given ksuid:
+To parse a single given KSUID:
 
 ```sh
-$ ksuid parse user_0EoZhc2lK5BSLogCVb7UYL
-ID:          user_0EoZhc2lK5BSLogCVb7UYL
-Environment: prod
+$ ksuid parse user_000000C8BhY47NRDD94E5VZxVX4bo
+ID:          user_000000C8BhY47NRDD94E5VZxVX4bo
 Resource:    user
-Timestamp:   2018-03-05T15:03:52Z
-Machine ID:  78:4f:43:84:fd:b8
-Process ID:  39089
-Sequence ID: 1
+Environment: prod
+Timestamp:   2021-04-29T10:46:56Z
+Machine ID:  1e:00:a2:3e:53:90
+Process ID:  21124
+Sequence ID: 0
 ```
 
-## How They Work
+## Structure
 
-ksuid are minimum 22 bytes long when Base62 encoded, consisting of 16 bytes decoded:
+Excluding the resource & environment prefix parts, KSUIDs are 29 bytes long when Base62 encoded, consisting of 21 bytes decoded:
 
-  - a 32-bit unix timestamp with a custom epoch of 2014-01-01T00:00:00Z
-  - the 48-bit MAC address of the primary interface on the generating machine
-  - the 16-bit process id of the generating service
-  - a 32-bit incrementing counter, reset every second
+- first 8 bytes: a 64-bit unix timestamp
+- next 9 bytes: a 64-bit instance ID, prefixed by an 8-bit scheme
+- next 4 bytes: a 32-bit incrementing counter, reset every second
 
-Optionally a ksuid has two, underscore delimited prefixes. The first prefix is optional, and is the environment in which the ksuid was generated (test, dev, git commit etc), omitting the environment identifies production only. The second prefix is the resource type (user, profile, vehicle etc) and is required.
+Optionally a KSUID has two, underscore delimited prefixes. The first prefix is optional, and is the environment in which the KSUID was generated (test, dev, git commit etc), omitting the environment identifies prod only. The second prefix is the resource type (user, profile, vehicle etc) and is required.
+
+### Instance IDs
+
+The instance ID is structured differently depending on the source environment - allowing the best choice for the given use-case.
+
+The first byte indicates which kind of instance ID, which then defines the structure of the remaining 8 bytes:
+
+- `0x44` (ASCII `D`): Docker
+	- 8 bytes: truncated Docker container ID
+- `0x48` (ASCII `H`): hardware
+	- first 6 bytes: the 48-bit MAC address
+	- next 2 bytes: the 16-bit process ID (truncated if necessary)
+- `0x52` (ASCII `R`): random
+	- 8 bytes: randomly generated bytes
+
+The random option should only be used if no reliable instance ID is available.
