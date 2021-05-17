@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/jackc/pgconn"
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,7 +20,7 @@ func TestIsDuplicate(t *testing.T) {
 		{"NoError", nil, "", false},
 		{"NotPgError", errors.New("foo"), "", false},
 		{
-			"PrimaryKey",
+			"PrimaryKey (pq)",
 			&pq.Error{
 				Severity:   "ERROR",
 				Code:       "23505",
@@ -31,6 +32,22 @@ func TestIsDuplicate(t *testing.T) {
 				File:       "nbtinsert.c",
 				Line:       "434",
 				Routine:    "_bt_check_unique",
+			},
+			"events_pkey", true,
+		},
+		{
+			"PrimaryKey (pgx)",
+			&pgconn.PgError{
+				Severity:       "ERROR",
+				Code:           "23505",
+				Message:        "duplicate key value violates unique constraint \"events_pkey\"",
+				Detail:         "Key (id)=(abc123) already exists.",
+				SchemaName:     "public",
+				TableName:      "events",
+				ConstraintName: "events_pkey",
+				File:           "nbtinsert.c",
+				Line:           434,
+				Routine:        "_bt_check_unique",
 			},
 			"events_pkey", true,
 		},
@@ -61,7 +78,7 @@ func TestIsPLv8Error(t *testing.T) {
 		{"NoError", nil, "", false},
 		{"NotPgError", errors.New("foo"), "", false},
 		{
-			"Throw",
+			"Throw (pq)",
 			&pq.Error{
 				Severity: "ERROR",
 				Code:     "XX000",
@@ -69,6 +86,19 @@ func TestIsPLv8Error(t *testing.T) {
 				Where:    "undefined() LINE 1:  throw new Error('hello world'); ",
 				File:     "plv8.cc",
 				Line:     "1878",
+				Routine:  "rethrow",
+			},
+			"hello world", true,
+		},
+		{
+			"Throw (pgx)",
+			&pgconn.PgError{
+				Severity: "ERROR",
+				Code:     "XX000",
+				Message:  "hello world",
+				Where:    "undefined() LINE 1:  throw new Error('hello world'); ",
+				File:     "plv8.cc",
+				Line:     1878,
 				Routine:  "rethrow",
 			},
 			"hello world", true,
