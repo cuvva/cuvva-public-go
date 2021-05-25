@@ -9,7 +9,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/go-chi/chi v1.5.4
 	github.com/go-git/go-billy/v5 v5.3.1
-	github.com/go-git/go-git/v5 v5.4.0
+	github.com/go-git/go-git/v5 v5.4.1
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/hashicorp/go-tfe v0.14.0
 	github.com/jackc/pgconn v1.8.1
