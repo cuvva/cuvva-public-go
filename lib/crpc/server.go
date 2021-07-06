@@ -563,14 +563,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	req.ctx = setRequestContext(r.Context(), req)
 
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
 	var ok bool
 	req.Method, req.Version, ok = requestPath(r.URL.Path)
 	if !ok {
 		s.writeError(w, cher.New(cher.NotFound, nil))
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 	s.writeError(w, s.Serve(w, req))
 }
