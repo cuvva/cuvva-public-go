@@ -39,7 +39,7 @@ func (r Redis) Connect() (*redis.Client, error) {
 	client := redis.NewClient(opts)
 
 	if err := client.Ping().Err(); err != nil {
-		return nil, err
+		return client, err
 	}
 
 	return client, nil
