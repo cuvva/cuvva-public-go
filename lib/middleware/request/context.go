@@ -7,19 +7,39 @@ import (
 	"github.com/cuvva/cuvva-public-go/lib/clog"
 )
 
+// forkedContext allows cloning context values
+// while discarding deadlines and cancellations
+type forkedContext struct {
+	ctx context.Context
+}
+
+func (forkedContext) Deadline() (time.Time, bool) {
+	return time.Time{}, false
+}
+
+func (forkedContext) Done() <-chan struct{} {
+	return nil
+}
+
+func (forkedContext) Err() error {
+	return nil
+}
+
+func (d forkedContext) Value(key interface{}) interface{} {
+	return d.ctx.Value(key)
+}
+
+func cloneContext(ctx context.Context) context.Context {
+	return forkedContext{ctx}
+}
+
 // maps are type aware, define a custom string type for context keys
 // to prevent collisions with third-party context that uses the same key.
 type ContextKey string
 
 // ForkContext provides a callback function with a new context inheriting values from the request context, and will log any error returned by the callback
 func ForkContext(ctx context.Context, fn func(context.Context) error) {
-	requestID := GetRequestIDContext(ctx)
-	logger := clog.Get(ctx)
-
-	newCtx := context.Background()
-
-	newCtx = clog.Set(newCtx, logger)
-	newCtx = SetRequestIDContext(newCtx, requestID)
+	newCtx := cloneContext(ctx)
 
 	go func() {
 		err := fn(newCtx)
@@ -29,17 +49,9 @@ func ForkContext(ctx context.Context, fn func(context.Context) error) {
 	}()
 }
 
-// ForkContext provides a callback function with a new context inheriting values from the request context with a timeout, , and will log any error returned by the callback
+// ForkContext provides a callback function with a new context inheriting values from the request context with a timeout, and will log any error returned by the callback
 func ForkContextWithTimeout(ctx context.Context, timeout time.Duration, fn func(context.Context) error) {
-	requestID := GetRequestIDContext(ctx)
-	logger := clog.Get(ctx)
-
-	newCtx := context.Background()
-
-	newCtx = clog.Set(newCtx, logger)
-	newCtx = SetRequestIDContext(newCtx, requestID)
-
-	newCtx, cancel := context.WithTimeout(newCtx, timeout)
+	newCtx, cancel := context.WithTimeout(cloneContext(ctx), timeout)
 
 	go func() {
 		defer cancel()
