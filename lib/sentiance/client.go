@@ -13,6 +13,7 @@ type Client interface {
 	UserLink(ctx context.Context, req *UserLinkRequest) (*UserLinkResponse, error)
 	GetEventAtStartDate(ctx context.Context, req *GetEventAtStartDateRequest) (*TransportEventResponse, error)
 	GetEventByID(ctx context.Context, req *GetEventByIDRequest) (*TransportEventResponse, error)
+	GetEventAndWaypointsByID(ctx context.Context, req *GetEventByIDRequest) (*TransportEventResponse, error)
 }
 
 type HTTPClient struct {
@@ -72,6 +73,38 @@ func (c *HTTPClient) GetEventByID(ctx context.Context, req *GetEventByIDRequest)
 					event_id
 					mode
 					occupant_role
+				}
+			}
+		}
+	}`
+
+	return res, c.Do(ctx, "POST", "/v2/gql", nil, GraphQLRequest{Query: query, Variables: req}, &res)
+}
+
+func (c *HTTPClient) GetEventAndWaypointsByID(ctx context.Context, req *GetEventByIDRequest) (res *TransportEventWithWaypointsResponse, err error) {
+	query := `query ($sentiance_user_id: String!, $event_id: [String]!) {
+		user(id: $sentiance_user_id) {
+			id
+			... on User {
+				external_id
+			}
+			event_history(event_id: $event_id) {
+				type
+				start
+				end
+				... on Transport {
+					event_id
+					mode
+					occupant_role
+					waypoints {
+						type
+						latitude
+						longitude
+						timestamp
+						accuracy
+						speed
+						altitude
+					}
 				}
 			}
 		}
