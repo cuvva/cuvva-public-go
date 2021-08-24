@@ -13,7 +13,7 @@ type Client interface {
 	UserLink(ctx context.Context, req *UserLinkRequest) (*UserLinkResponse, error)
 	GetEventAtStartDate(ctx context.Context, req *GetEventAtStartDateRequest) (*TransportEventResponse, error)
 	GetEventByID(ctx context.Context, req *GetEventByIDRequest) (*TransportEventResponse, error)
-	GetEventAndWaypointsByID(ctx context.Context, req *GetEventByIDRequest) (*TransportEventResponse, error)
+	GetEventAndWaypointsByID(ctx context.Context, req *GetEventByIDRequest) (*TransportEventWithWaypointsResponse, error)
 }
 
 type HTTPClient struct {
