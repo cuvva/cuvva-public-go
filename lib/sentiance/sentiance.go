@@ -75,22 +75,22 @@ type UserWithWaypoints struct {
 }
 
 type TransportEvents struct {
+	AnalysisType string     `json:"analysis_type"`
 	EventID      string     `json:"event_id"`
 	Type         string     `json:"type"`
 	Mode         string     `json:"mode"`
 	OccupantRole string     `json:"occupant_role"`
-	AnalysisType string     `json:"analysis_type"`
 	Start        string     `json:"start"`
 	End          string     `json:"end"`
 	Waypoints    []Waypoint `json:"waypoints"`
 }
 
 type Waypoint struct {
-	Type      string    `json:"type"`
-	Latitude  int64     `json:"longitude"`
-	Longitude int64     `json:"latitude"`
-	Timestamp time.Time `json:"timestamp"`
-	Accuracy  int       `json:"accuracy"`
-	Speed     int64     `json:"speed"`
-	Altitude  int64     `json:"altitude"`
+	Type      string  `json:"type"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Timestamp string  `json:"timestamp"`
+	Accuracy  int     `json:"accuracy"`
+	Speed     float64 `json:"speed"`
+	Altitude  float64 `json:"altitude"`
 }
