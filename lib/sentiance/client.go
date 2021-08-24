@@ -96,6 +96,7 @@ func (c *HTTPClient) GetEventAndWaypointsByID(ctx context.Context, req *GetEvent
 					event_id
 					mode
 					occupant_role
+					analysis_type
 					waypoints {
 						type
 						latitude

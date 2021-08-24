@@ -61,30 +61,31 @@ type UserResponse struct {
 }
 
 type TransportEventWithWaypointsResponse struct {
-	Data DataWithWaypointsResponse `json:"data"`
+	Data TransportEventWithWaypointsData `json:"data"`
 }
 
-type DataWithWaypointsResponse struct {
-	User UserWithWaypointsResponse `json:"user"`
+type TransportEventWithWaypointsData struct {
+	User UserWithWaypoints `json:"user"`
 }
 
-type UserWithWaypointsResponse struct {
-	ID           string                                       `json:"id"`
-	ExternalID   string                                       `json:"external_id"`
-	EventHistory []*EnrichTransportWithWaypointsEventResponse `json:"event_history"`
+type UserWithWaypoints struct {
+	ID           string             `json:"id"`
+	ExternalID   string             `json:"external_id"`
+	EventHistory []*TransportEvents `json:"event_history"`
 }
 
-type EnrichTransportWithWaypointsEventResponse struct {
-	EventID      string                             `json:"event_id"`
-	Type         string                             `json:"type"`
-	Mode         string                             `json:"mode"`
-	OccupantRole string                             `json:"occupant_role"`
-	Start        string                             `json:"start"`
-	End          string                             `json:"end"`
-	Waypoints    []EnrichTransportWaypointsResponse `json:"waypoints"`
+type TransportEvents struct {
+	EventID      string     `json:"event_id"`
+	Type         string     `json:"type"`
+	Mode         string     `json:"mode"`
+	OccupantRole string     `json:"occupant_role"`
+	AnalysisType string     `json:"analysis_type"`
+	Start        string     `json:"start"`
+	End          string     `json:"end"`
+	Waypoints    []Waypoint `json:"waypoints"`
 }
 
-type EnrichTransportWaypointsResponse struct {
+type Waypoint struct {
 	Type      string    `json:"type"`
 	Latitude  int64     `json:"longitude"`
 	Longitude int64     `json:"latitude"`
