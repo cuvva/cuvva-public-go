@@ -23,7 +23,7 @@ require (
 	github.com/reiver/go-stringcase v0.0.0-20150131170254-b80b3ac9fc37
 	github.com/reiver/go-whitespace v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.8.1
-	github.com/spf13/cobra v1.1.3
+	github.com/spf13/cobra v1.2.1
 	github.com/stretchr/testify v1.7.0
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.mongodb.org/mongo-driver v1.7.1
