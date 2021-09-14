@@ -28,23 +28,6 @@ Or with some flags
 - `--prod`: work on prod, where `nonprod` is the default
 - `--branch {name}` (`-b`): define a branch to use, where `master` is the default
 
-### update-web
-
-A CLI tool to deploy web applications on a specific system/environment.
-
-`cdep update-web {type} {env|all} {...apps} <flags>`
-
-For example:
-
-- `cdep uw cf all website`
-- `cdep uw cf all website -b new-ppc-landing`
-- `cdep uw cf prod website --prod`
-
-Flags are:
-
-- `--prod`: work on the prod system, where `nonprod` is the default
-- `--branch {name}` (`-b`): define a branch to use, where `master` is the default
-
 ### update-default
 
 Specifically for fast forwarding the default commit on an environment, or all of them.

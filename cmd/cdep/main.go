@@ -12,7 +12,6 @@ import (
 func main() {
 	rootCmd.AddCommand(cmd.VersionCmd)
 	rootCmd.AddCommand(cmd.UpdateCmd)
-	rootCmd.AddCommand(cmd.UpdateWebCmd)
 	rootCmd.AddCommand(cmd.UpdateDefaultCmd)
 
 	if err := rootCmd.Execute(); err != nil {
