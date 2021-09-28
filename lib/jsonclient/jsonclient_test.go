@@ -98,6 +98,7 @@ func TestRequestBody(t *testing.T) {
 
 	gock.New("http://coo.va/").
 		Post("/test").
+		MatchType("application/json; charset=utf-8").
 		JSON(testJSON).
 		Reply(http.StatusNoContent)
 
