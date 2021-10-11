@@ -180,6 +180,48 @@ func (e E) Value() (driver.Value, error) {
 	return json.Marshal(e)
 }
 
+// ErrorOrNil returns an error interface if this Error represents
+// a list of errors, or returns nil if the list of errors is empty. This
+// function is useful at the end of accumulation to make sure that the value
+// returned represents the existence of errors.
+func (e *E) ErrorOrNil() error {
+	if e == nil {
+		return nil
+	}
+	if len(e.Reasons) == 0 {
+		return nil
+	}
+
+	return e
+}
+
+func (e *E) GoString() string {
+	return fmt.Sprintf("*%#v", *e)
+}
+
+// WrappedErrors returns the list of errors that this Error is wrapping. It is
+// an implementation of the errwrap.Wrapper interface so that multierror.Error
+// can be used with that library.
+//
+// This method is not safe to be called concurrently. Unlike accessing the
+// Errors field directly, this function also checks if the multierror is nil to
+// prevent a null-pointer panic. It satisfies the errwrap.Wrapper interface.
+func (e *E) WrappedErrors() []error {
+	pretty.Log("in unwrap")
+	pretty.Log(e)
+
+	if e == nil {
+		return nil
+	}
+
+	errs := make([]error, len(e.Reasons))
+	for i, _ := range e.Reasons {
+		errs[i] = e.Unwrap()
+	}
+
+	return errs
+}
+
 // Unwrap returns an error from Error (or nil if there are no errors).
 // This error returned will further support Unwrap to get the next error,
 // etc. The order will match the order of Errors in the multierror.Error
@@ -191,13 +233,13 @@ func (e E) Value() (driver.Value, error) {
 // This will perform a shallow copy of the errors slice. Any errors appended
 // to this error after calling Unwrap will not be available until a new
 // Unwrap is called on the multierror.Error.
-func (e E) Unwrap() error {
+func (e *E) Unwrap() error {
 	pretty.Log("in unwrap")
 	pretty.Log(e)
 	// If we have no errors then we do nothing
-	//if e == nil || len(e.Reasons) == 0 {
-	//	return nil
-	//}
+	if e == nil || len(e.Reasons) == 0 {
+		return nil
+	}
 
 	// If we have exactly one error, we can just return that directly.
 	if len(e.Reasons) == 1 {
