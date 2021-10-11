@@ -97,6 +97,30 @@ func (e E) Error() string {
 	return e.Code
 }
 
+// As implements errors.As by attempting to map to the current value.
+func (e E) As(target interface{}) bool {
+	pretty.Log("in as2")
+	pretty.Log(e)
+
+	t, ok := target.(*E)
+	if !ok {
+		return false
+	}
+	return e.Code == t.Code
+}
+
+// Is implements errors.Is by comparing the current value directly.
+func (e E) Is(target error) bool {
+	pretty.Log("in is2")
+	pretty.Log(e)
+
+	t, ok := target.(*E)
+	if !ok {
+		return false
+	}
+	return e.Code == t.Code
+}
+
 // Serialize returns a json representation of the Cuvva Error structure
 func (e E) Serialize() string {
 	output, err := json.Marshal(e)
