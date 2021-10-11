@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"github.com/kr/pretty"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -91,6 +92,8 @@ func (e E) StatusCode() int {
 
 // Error implements the error interface.
 func (e E) Error() string {
+	pretty.Log("in error2")
+	pretty.Log(e)
 	return e.Code
 }
 
@@ -165,6 +168,8 @@ func (e E) Value() (driver.Value, error) {
 // to this error after calling Unwrap will not be available until a new
 // Unwrap is called on the multierror.Error.
 func (e *E) Unwrap() error {
+	pretty.Log("in unwrap")
+	pretty.Log(e)
 	// If we have no errors then we do nothing
 	if e == nil || len(e.Reasons) == 0 {
 		return nil
@@ -196,12 +201,16 @@ type chain []E
 
 // Error implements the error interface
 func (e chain) Error() string {
+	pretty.Log("in error")
+	pretty.Log(e)
 	return e[0].Error()
 }
 
 // Unwrap implements errors.Unwrap by returning the next error in the
 // chain or nil if there are no more errors.
 func (e chain) Unwrap() error {
+	pretty.Log("in unwrap2")
+	pretty.Log(e)
 	if len(e) == 1 {
 		return nil
 	}
@@ -211,10 +220,14 @@ func (e chain) Unwrap() error {
 
 // As implements errors.As by attempting to map to the current value.
 func (e chain) As(target interface{}) bool {
+	pretty.Log("in as")
+	pretty.Log(e)
 	return errors.As(e[0], target)
 }
 
 // Is implements errors.Is by comparing the current value directly.
 func (e chain) Is(target error) bool {
+	pretty.Log("in is")
+	pretty.Log(e)
 	return errors.Is(e[0], target)
 }
