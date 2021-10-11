@@ -191,13 +191,13 @@ func (e E) Value() (driver.Value, error) {
 // This will perform a shallow copy of the errors slice. Any errors appended
 // to this error after calling Unwrap will not be available until a new
 // Unwrap is called on the multierror.Error.
-func (e *E) Unwrap() error {
+func (e E) Unwrap() error {
 	pretty.Log("in unwrap")
 	pretty.Log(e)
 	// If we have no errors then we do nothing
-	if e == nil || len(e.Reasons) == 0 {
-		return nil
-	}
+	//if e == nil || len(e.Reasons) == 0 {
+	//	return nil
+	//}
 
 	// If we have exactly one error, we can just return that directly.
 	if len(e.Reasons) == 1 {
