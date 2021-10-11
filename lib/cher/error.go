@@ -152,3 +152,69 @@ func Coerce(v interface{}) E {
 func (e E) Value() (driver.Value, error) {
 	return json.Marshal(e)
 }
+
+// Unwrap returns an error from Error (or nil if there are no errors).
+// This error returned will further support Unwrap to get the next error,
+// etc. The order will match the order of Errors in the multierror.Error
+// at the time of calling.
+//
+// The resulting error supports errors.As/Is/Unwrap so you can continue
+// to use the stdlib errors package to introspect further.
+//
+// This will perform a shallow copy of the errors slice. Any errors appended
+// to this error after calling Unwrap will not be available until a new
+// Unwrap is called on the multierror.Error.
+func (e *E) Unwrap() error {
+	// If we have no errors then we do nothing
+	if e == nil || len(e.Reasons) == 0 {
+		return nil
+	}
+
+	// If we have exactly one error, we can just return that directly.
+	if len(e.Reasons) == 1 {
+		return e.Reasons[0]
+	}
+
+	// Shallow copy the slice
+	errs := make([]E, len(e.Reasons))
+	copy(errs, e.Reasons)
+	return chain(errs)
+}
+
+// chain implements the interfaces necessary for errors.Is/As/Unwrap to
+// work in a deterministic way with multierror. A chain tracks a list of
+// errors while accounting for the current represented error. This lets
+// Is/As be meaningful.
+//
+// Unwrap returns the next error. In the cleanest form, Unwrap would return
+// the wrapped error here but we can't do that if we want to properly
+// get access to all the errors. Instead, users are recommended to use
+// Is/As to get the correct error type out.
+//
+// Precondition: []E is non-empty (len > 0)
+type chain []E
+
+// Error implements the error interface
+func (e chain) Error() string {
+	return e[0].Error()
+}
+
+// Unwrap implements errors.Unwrap by returning the next error in the
+// chain or nil if there are no more errors.
+func (e chain) Unwrap() error {
+	if len(e) == 1 {
+		return nil
+	}
+
+	return e[1:]
+}
+
+// As implements errors.As by attempting to map to the current value.
+func (e chain) As(target interface{}) bool {
+	return errors.As(e[0], target)
+}
+
+// Is implements errors.Is by comparing the current value directly.
+func (e chain) Is(target error) bool {
+	return errors.Is(e[0], target)
+}
