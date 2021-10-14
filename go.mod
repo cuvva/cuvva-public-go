@@ -3,7 +3,7 @@ module github.com/cuvva/cuvva-public-go
 go 1.16
 
 require (
-	github.com/Masterminds/squirrel v1.5.0
+	github.com/Masterminds/squirrel v1.5.1
 	github.com/PagerDuty/go-pagerduty v1.4.1
 	github.com/aws/aws-sdk-go v1.40.56
 	github.com/blang/semver v3.5.1+incompatible
