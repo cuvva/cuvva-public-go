@@ -219,6 +219,7 @@ func (cfg *Server) Serve(ctx context.Context, l net.Listener, srv *http.Server) 
 	eg.Go(func() error {
 		select {
 		case <-ctx.Done():
+			logrus.Println("shutting down gracefully")
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.Graceful)*time.Second)
 			defer cancel()
 			return srv.Shutdown(ctx)
