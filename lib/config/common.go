@@ -220,7 +220,7 @@ func (cfg *Server) Serve(ctx context.Context, l net.Listener, srv *http.Server) 
 		select {
 		case <-ctx.Done():
 			logrus.Println("shutting down gracefully")
-			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.Graceful)*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), cfg.GracefulTimeout())
 			defer cancel()
 			return srv.Shutdown(ctx)
 		case <-egCtx.Done():
@@ -229,6 +229,14 @@ func (cfg *Server) Serve(ctx context.Context, l net.Listener, srv *http.Server) 
 	})
 
 	return eg.Wait()
+}
+
+func (cfg *Server) GracefulTimeout() time.Duration {
+	if cfg.Graceful == 0 {
+		cfg.Graceful = DefaultGraceful
+	}
+
+	return time.Duration(cfg.Graceful) * time.Second
 }
 
 func ContextWithCancelOnSignal(ctx context.Context) context.Context {
