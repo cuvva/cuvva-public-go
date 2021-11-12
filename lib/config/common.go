@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,9 +15,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/cuvva/cuvva-public-go/lib/db/mongodb"
 	"github.com/go-redis/redis"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
+	"golang.org/x/sync/errgroup"
 )
 
 // Redis configures a connection to a Redis database.
@@ -163,7 +166,7 @@ func (cfg *Server) ListenAndServe(srv *http.Server) error {
 	}
 
 	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGTERM)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
 	errs := make(chan error, 1)
 
@@ -188,6 +191,68 @@ func (cfg *Server) ListenAndServe(srv *http.Server) error {
 
 		return nil
 	}
+}
+
+func (cfg *Server) Listen() (net.Listener, error) {
+	l, err := net.Listen("tcp", cfg.Addr)
+	if err != nil {
+		return nil, err
+	}
+
+	logrus.WithField("addr", cfg.Addr).Info("listening")
+	return l, nil
+}
+
+// Serve the HTTP requests on the specified listener, and gracefully close when the context is cancelled.
+func (cfg *Server) Serve(ctx context.Context, l net.Listener, srv *http.Server) (err error) {
+	eg, egCtx := errgroup.WithContext(ctx)
+
+	eg.Go(func() error {
+		err := srv.Serve(l)
+		if err == http.ErrServerClosed {
+			return nil
+		}
+
+		return err
+	})
+
+	eg.Go(func() error {
+		select {
+		case <-ctx.Done():
+			logrus.Println("shutting down gracefully")
+			ctx, cancel := context.WithTimeout(context.Background(), cfg.GracefulTimeout())
+			defer cancel()
+			return srv.Shutdown(ctx)
+		case <-egCtx.Done():
+			return nil
+		}
+	})
+
+	return eg.Wait()
+}
+
+func (cfg *Server) GracefulTimeout() time.Duration {
+	if cfg.Graceful == 0 {
+		cfg.Graceful = DefaultGraceful
+	}
+
+	return time.Duration(cfg.Graceful) * time.Second
+}
+
+func ContextWithCancelOnSignal(ctx context.Context) context.Context {
+	ctx, cancel := context.WithCancel(ctx)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+
+	go func() {
+		defer cancel()
+		select {
+		case <-stop:
+		case <-ctx.Done():
+		}
+	}()
+
+	return ctx
 }
 
 // UnderwriterOpts represents the underwriters info/models options.
