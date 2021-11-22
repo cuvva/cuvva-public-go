@@ -12,7 +12,7 @@ require (
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/hashicorp/go-tfe v0.14.0
-	github.com/jackc/pgconn v1.10.0
+	github.com/jackc/pgconn v1.10.1
 	github.com/jamescun/basex v0.0.0-20180407124237-e1bcb39ab18e
 	github.com/lib/pq v1.10.2
 	github.com/onsi/ginkgo v1.14.2 // indirect
