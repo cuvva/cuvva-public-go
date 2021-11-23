@@ -1,6 +1,7 @@
 package checkmot
 
-const ErrUnexpectedResultCount = "unexpected number of results"
+const ErrNoResults = "no results"
+const ErrMultipleVehicles = "multiple vehicles returned"
 
 type Vehicle struct {
 	Registration  string `json:"registration"`
