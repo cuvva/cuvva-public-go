@@ -1,6 +1,11 @@
 package checkmot
 
-const ErrUnexpectedResultCount = "unexpected number of results"
+import "errors"
+
+var (
+	ErrNoResults        = errors.New("no results")
+	ErrMultipleVehicles = errors.New("multiple vehicles returned")
+)
 
 type Vehicle struct {
 	Registration  string `json:"registration"`
