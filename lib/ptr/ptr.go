@@ -23,3 +23,7 @@ func Float64(v float64) *float64 {
 func Time(v time.Time) *time.Time {
 	return &v
 }
+
+func Any[T any](t T) *T {
+	return &t
+}
