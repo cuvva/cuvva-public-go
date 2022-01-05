@@ -1,7 +1,11 @@
 package checkmot
 
-const ErrNoResults = "no results"
-const ErrMultipleVehicles = "multiple vehicles returned"
+import "errors"
+
+var (
+	ErrNoResults        = errors.New("no results")
+	ErrMultipleVehicles = errors.New("multiple vehicles returned")
+)
 
 type Vehicle struct {
 	Registration  string `json:"registration"`

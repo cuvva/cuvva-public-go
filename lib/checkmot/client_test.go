@@ -20,7 +20,13 @@ func TestClient_GetRecordByVRM(t *testing.T) {
 
 	tests := []testCase{
 		{
-			name: "",
+			name:           "no results",
+			response:       []byte(`[]`),
+			expectedResult: nil,
+			expectedErr:    ErrNoResults,
+		},
+		{
+			name: "two results same vehicle",
 			response: []byte(`
 [
   {
@@ -125,6 +131,66 @@ func TestClient_GetRecordByVRM(t *testing.T) {
 				},
 			},
 			expectedErr: nil,
+		},
+		{
+			name: "multiple results different vehicles",
+			response: []byte(`
+[
+  {
+    "registration": "CUV 001",
+    "make": "BMW",
+    "model": "X3",
+    "firstUsedDate": "2007.10.02",
+    "fuelType": "Diesel",
+    "primaryColour": "Grey",
+    "motTests": [
+      {
+        "completedDate": "2017.08.15 12:47:50",
+        "testResult": "PASSED",
+        "expiryDate": "2018.08.23",
+        "odometerValue": "114722",
+        "odometerUnit": "mi",
+        "motTestNumber": "269281492742",
+        "odometerResultType": "READ",
+        "rfrAndComments": [
+          {
+            "text": "Nearside Rear Tyre worn close to the legal limit (4.1.E.1)",
+            "type": "ADVISORY",
+            "dangerous": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "registration": "CUV 001",
+    "make": "BMW",
+    "model": "X3",
+    "firstUsedDate": "2011.10.02",
+    "fuelType": "Diesel",
+    "primaryColour": "Grey",
+    "motTests": [
+      {
+        "completedDate": "2021.09.24 12:07:40",
+        "testResult": "PASSED",
+        "expiryDate": "2022.09.23",
+        "odometerValue": "162236",
+        "odometerUnit": "mi",
+        "motTestNumber": "752024886501",
+        "odometerResultType": "READ",
+        "rfrAndComments": [
+          {
+            "text": "Offside Registration plate lamp inoperative in the case of multiple lamps or light sources (4.7.1 (b) (i))",
+            "type": "MINOR",
+            "dangerous": false
+          }
+        ]
+      }
+    ]
+  }
+]`),
+			expectedResult: nil,
+			expectedErr:    ErrMultipleVehicles,
 		},
 	}
 

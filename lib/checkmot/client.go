@@ -2,7 +2,6 @@ package checkmot
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/url"
 	"time"
@@ -33,7 +32,7 @@ func (c *Client) GetRecordByVRM(ctx context.Context, vrm string) (res *Vehicle, 
 	}
 
 	if len(out) == 0 {
-		return nil, errors.New(ErrNoResults)
+		return nil, ErrNoResults
 	}
 
 	if len(out) == 1 {
@@ -48,7 +47,7 @@ func (c *Client) GetRecordByVRM(ctx context.Context, vrm string) (res *Vehicle, 
 func attemptToMergeTestsForTheSameVehicle(out []*Vehicle) (*Vehicle, error) {
 	for i := 1; i < len(out); i++ {
 		if !isSameVehicle(out[0], out[i]) {
-			return nil, errors.New(ErrMultipleVehicles)
+			return nil, ErrMultipleVehicles
 		}
 
 		out[0].MOTTests = append(out[0].MOTTests, out[i].MOTTests...)
@@ -73,6 +72,24 @@ func isSameVehicle(a *Vehicle, b *Vehicle) bool {
 	if a.PrimaryColour != b.PrimaryColour {
 		return false
 	}
+	if !stringPointerCompare(a.ManufactureYear, b.ManufactureYear) {
+		return false
+	}
+	if !stringPointerCompare((*string)(a.FirstUsedDate), (*string)(b.FirstUsedDate)) {
+		return false
+	}
 
 	return true
+}
+
+func stringPointerCompare(a, b *string) bool {
+	if a == nil {
+		return b == nil
+	}
+
+	if b == nil {
+		return false
+	}
+
+	return *a == *b
 }
