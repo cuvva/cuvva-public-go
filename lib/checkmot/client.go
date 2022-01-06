@@ -2,6 +2,7 @@ package checkmot
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"net/url"
 	"time"
@@ -16,8 +17,23 @@ type Client struct {
 // NewClient creates a new vehicle service client.
 func NewClient(baseURL, key string) *Client {
 	httpClient := &http.Client{
-		Transport: &roundTripper{key},
-		Timeout:   5 * time.Second,
+		Transport: &roundTripper{
+			apiKey: key,
+			transport: &http.Transport{
+				DialContext: (&net.Dialer{
+					Timeout:   30 * time.Second,
+					KeepAlive: 30 * time.Second,
+				}).DialContext,
+				TLSHandshakeTimeout:   10 * time.Second,
+				MaxIdleConns:          3,
+				MaxIdleConnsPerHost:   3,
+				MaxConnsPerHost:       3,
+				IdleConnTimeout:       50 * time.Second, // idle timeout is 60 seconds server side
+				ExpectContinueTimeout: 1 * time.Second,
+				ForceAttemptHTTP2:     true,
+			},
+		},
+		Timeout: 5 * time.Second,
 	}
 
 	return &Client{
