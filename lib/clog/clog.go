@@ -8,6 +8,7 @@ import (
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/cuvva/cuvva-public-go/lib/servicecontext"
+	"github.com/cuvva/cuvva-public-go/lib/version"
 	"github.com/sirupsen/logrus"
 )
 
@@ -54,7 +55,7 @@ type Config struct {
 func (c Config) Configure() (log *logrus.Entry) {
 	log = logrus.WithFields(logrus.Fields{
 		ServiceKey: servicecontext.Get().Name,
-		VersionKey: servicecontext.Get().Revision,
+		VersionKey: version.Revision,
 	})
 
 	hostname, err := os.Hostname()
