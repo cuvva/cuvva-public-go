@@ -1,15 +1,9 @@
 package servicecontext
 
-import (
-	"github.com/cuvva/cuvva-public-go/lib/version"
-)
-
 // Info type holds useful info about the currently-running service
 type Info struct {
 	Name        string
 	Environment string
-	Version     string
-	Revision    string
 }
 
 var service *Info
@@ -19,8 +13,6 @@ func Set(name, env string) {
 	service = &Info{
 		Name:        name,
 		Environment: env,
-		Version:     version.Truncated,
-		Revision:    version.Revision,
 	}
 }
 
