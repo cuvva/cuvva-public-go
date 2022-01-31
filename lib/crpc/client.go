@@ -27,7 +27,7 @@ func NewClient(baseURL string, c *http.Client) *Client {
 
 	if servicecontext.IsSet() {
 		svc := servicecontext.Get()
-		jcc.UserAgent = fmt.Sprintf(userAgentTemplateWithService, svc.Version, svc.Name, svc.Environment)
+		jcc.UserAgent = fmt.Sprintf(userAgentTemplateWithService, version.Truncated, svc.Name, svc.Environment)
 	} else {
 		jcc.UserAgent = fmt.Sprintf(userAgentTemplate, version.Truncated)
 	}

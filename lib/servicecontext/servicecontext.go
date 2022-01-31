@@ -1,15 +1,13 @@
 package servicecontext
 
 import (
-	"github.com/cuvva/cuvva-public-go/lib/version"
+	"context"
 )
 
 // Info type holds useful info about the currently-running service
 type Info struct {
 	Name        string
 	Environment string
-	Version     string
-	Revision    string
 }
 
 var service *Info
@@ -19,8 +17,6 @@ func Set(name, env string) {
 	service = &Info{
 		Name:        name,
 		Environment: env,
-		Version:     version.Truncated,
-		Revision:    version.Revision,
 	}
 }
 
@@ -36,4 +32,27 @@ func Get() Info {
 // IsSet returns true if the singleton has been initialised
 func IsSet() bool {
 	return service != nil
+}
+
+type contextKey string
+
+var (
+	infoContextKey = contextKey("info")
+)
+
+// SetContext wraps the context with the service info
+func SetContext(ctx context.Context, name, env string) context.Context {
+	return context.WithValue(ctx, infoContextKey, &Info{
+		Name:        name,
+		Environment: env,
+	})
+}
+
+// GetContext retrieves the service info from the context
+func GetContext(ctx context.Context) *Info {
+	if val, ok := ctx.Value(infoContextKey).(*Info); ok {
+		return val
+	}
+
+	return nil
 }
