@@ -1,10 +1,11 @@
 package cher
 
 import (
-	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -82,6 +83,51 @@ func TestCoerce(t *testing.T) {
 			e := Coerce(test.Src)
 
 			assert.Equal(t, test.Result, e)
+		})
+	}
+}
+
+func TestWrapIfNotCher(t *testing.T) {
+	type testCase struct {
+		name   string
+		msg    string
+		err    error
+		expect func(*testing.T, error)
+	}
+
+	tests := []testCase{
+		{
+			name: "nil",
+			msg:  "foo",
+			err:  nil,
+			expect: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "err",
+			msg:  "foo",
+			err:  fmt.Errorf("nope"),
+			expect: func(t *testing.T, err error) {
+				assert.EqualError(t, err, "foo: nope")
+			},
+		},
+		{
+			name: "cher",
+			msg:  "foo",
+			err:  New("nope", nil),
+			expect: func(t *testing.T, err error) {
+				cErr, ok := err.(E)
+				assert.True(t, ok)
+				assert.Equal(t, "nope", cErr.Code)
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := WrapIfNotCher(tc.err, tc.msg)
+			tc.expect(t, result)
 		})
 	}
 }
