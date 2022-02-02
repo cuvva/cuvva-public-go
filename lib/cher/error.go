@@ -152,3 +152,16 @@ func Coerce(v interface{}) E {
 func (e E) Value() (driver.Value, error) {
 	return json.Marshal(e)
 }
+
+func WrapIfNotCher(err error, msg string) error {
+	if err == nil {
+		return nil
+	}
+
+	var cErr E
+	if errors.As(err, &cErr) {
+		return cErr
+	}
+
+	return errors.Wrap(err, msg)
+}
