@@ -62,7 +62,8 @@ func (r Redis) Connect() (*redis.Client, error) {
 
 // MongoDB configures a connection to a Mongo database.
 type MongoDB struct {
-	URI string `json:"uri"`
+	URI            string        `json:"uri"`
+	ConnectTimeout time.Duration `json:"connect_timeout"`
 }
 
 // Options returns the MongoDB client options and database name.
@@ -97,9 +98,13 @@ func (m MongoDB) Connect() (*mongodb.Database, error) {
 		return nil, err
 	}
 
+	if m.ConnectTimeout == 0 {
+		m.ConnectTimeout = 10 * time.Second
+	}
+
 	// this package can only be used for service config
 	// so can only happen at init-time - no need to accept context input
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), m.ConnectTimeout)
 	defer cancel()
 
 	return mongodb.Connect(ctx, opts, dbName)
