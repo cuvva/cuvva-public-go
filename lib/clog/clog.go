@@ -52,9 +52,14 @@ type Config struct {
 }
 
 // Configure applies Cuvva standard Logging structure options to a logrus Entry.
-func (c Config) Configure() (log *logrus.Entry) {
+func (c Config) Configure(ctx context.Context) (log *logrus.Entry) {
+	var serviceName string
+	if svc := servicecontext.GetContext(ctx); svc != nil {
+		serviceName = svc.Name
+	}
+
 	log = logrus.WithFields(logrus.Fields{
-		ServiceKey: servicecontext.Get().Name,
+		ServiceKey: serviceName,
 		VersionKey: version.Revision,
 	})
 

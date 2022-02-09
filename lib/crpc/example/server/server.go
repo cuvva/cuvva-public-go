@@ -47,7 +47,7 @@ func main() {
 		},
 	}
 
-	log := cfg.Logging.Configure()
+	log := cfg.Logging.Configure(context.Background())
 
 	var es example.Service = &ExampleServer{}
 

@@ -22,11 +22,11 @@ type Client struct {
 
 // NewClient returns a client configured with a transport scheme, remote host
 // and URL prefix supplied as a URL <scheme>://<host></prefix>
-func NewClient(baseURL string, c *http.Client) *Client {
+func NewClient(ctx context.Context, baseURL string, c *http.Client) *Client {
 	jcc := jsonclient.NewClient(baseURL, c)
 
-	if servicecontext.IsSet() {
-		svc := servicecontext.Get()
+	svc := servicecontext.GetContext(ctx)
+	if svc != nil {
 		jcc.UserAgent = fmt.Sprintf(userAgentTemplateWithService, version.Truncated, svc.Name, svc.Environment)
 	} else {
 		jcc.UserAgent = fmt.Sprintf(userAgentTemplate, version.Truncated)

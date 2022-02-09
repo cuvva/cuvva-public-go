@@ -25,7 +25,7 @@ func HandlePanic(ctx context.Context, propagate bool) {
 	if ctxLogger != nil {
 		logger = ctxLogger.entry
 	} else {
-		logger = Config{Format: "json", Debug: false}.Configure()
+		logger = Config{Format: "json", Debug: false}.Configure(ctx)
 	}
 
 	logger.WithFields(logrus.Fields{
