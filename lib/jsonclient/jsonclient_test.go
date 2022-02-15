@@ -165,7 +165,7 @@ func TestErrorCatching(t *testing.T) {
 }
 
 func TestRoundTripper(t *testing.T) {
-	testKey := "testAuthKey"
+	testKey := string(Version1)
 
 	testAuthenticatedRoundTripper := NewAuthenticatedRoundTripper(nil, "CuvvaInternal", "01."+testKey)
 
