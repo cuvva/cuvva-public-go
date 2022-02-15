@@ -163,3 +163,21 @@ func TestErrorCatching(t *testing.T) {
 	assert.Equal(t, "internal_server_error", err.(cher.E).Code)
 	assert.True(t, gock.IsDone())
 }
+
+func TestRoundTripper(t *testing.T) {
+	testKey := "testAuthKey"
+
+	testAuthenticatedRoundTripper := NewAuthenticatedRoundTripper(nil, "CuvvaInternal", "01."+testKey)
+
+	assert.Equal(t, http.DefaultTransport, testAuthenticatedRoundTripper.RoundTripper)
+}
+
+func TestRoundTripperPanicWithEmptyKey(t *testing.T) {
+	defer func() { recover() }()
+
+	testKey := ""
+
+	_ = NewAuthenticatedRoundTripper(nil, "CuvvaInternal", "01."+testKey)
+
+	t.Errorf("did not panic")
+}

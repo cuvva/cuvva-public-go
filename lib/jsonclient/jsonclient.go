@@ -25,6 +25,11 @@ var (
 	ErrNoResponse = &ClientRequestError{"no response to unmarshal to body", nil}
 )
 
+type KeyVersion string
+
+// Version1 is an auth key version that is provided via config file
+const Version1 KeyVersion = "01."
+
 // DefaultUserAgent is the default HTTP User-Agent Header that is presented to the server.
 var DefaultUserAgent = "jsonclient/" + version.Truncated + " (+https://cuvva.com)"
 
@@ -247,6 +252,10 @@ type AuthenticatedRoundTripper struct {
 func NewAuthenticatedRoundTripper(rt http.RoundTripper, authType, authToken string) *AuthenticatedRoundTripper {
 	if rt == nil {
 		rt = http.DefaultTransport
+	}
+
+	if authToken == string(Version1) {
+		panic("no authentication token added")
 	}
 
 	return &AuthenticatedRoundTripper{
