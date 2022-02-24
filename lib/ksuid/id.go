@@ -95,21 +95,12 @@ func splitPrefixID(s []byte) (environment, resource string, id []byte) {
 
 // IsZero returns true if id has not yet been initialized.
 func (id ID) IsZero() bool {
-	return id.Environment == "" && id.Resource == "" &&
-		id.Timestamp == 0 && id.InstanceID == nil &&
-		id.SequenceID == 0
+	return id == ID{}
 }
 
 // Equal returns true if the given ID matches id of the caller.
 func (id ID) Equal(x ID) bool {
-	if id.InstanceID == nil || x.InstanceID == nil {
-		return false
-	}
-
-	return id.Environment == x.Environment && id.Resource == x.Resource &&
-		id.InstanceID.Scheme() == x.InstanceID.Scheme() &&
-		id.InstanceID.Bytes() == x.InstanceID.Bytes() &&
-		id.Timestamp == x.Timestamp && id.SequenceID == x.SequenceID
+	return id == x
 }
 
 // Scan implements a custom database/sql.Scanner to support
