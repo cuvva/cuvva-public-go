@@ -18,7 +18,7 @@ type ID struct {
 	Environment string
 	Resource    string
 
-	Timestamp  time.Time
+	Timestamp  int64
 	InstanceID InstanceID
 	SequenceID uint32
 }
@@ -63,7 +63,7 @@ func Parse(str string) (id ID, err error) {
 		return
 	}
 
-	id.Timestamp = time.Unix(int64(binary.BigEndian.Uint64(dst[:8])), 0).UTC()
+	id.Timestamp = int64(binary.BigEndian.Uint64(dst[:8]))
 	id.InstanceID, err = ParseInstanceID(dst[8:17])
 	id.SequenceID = binary.BigEndian.Uint32(dst[17:])
 
@@ -96,8 +96,10 @@ func splitPrefixID(s []byte) (environment, resource string, id []byte) {
 
 // IsZero returns true if id has not yet been initialized.
 func (id ID) IsZero() bool {
+	ts := time.Unix(id.Timestamp, 0)
+
 	return id.Environment == "" && id.Resource == "" &&
-		id.Timestamp.IsZero() && id.InstanceID == nil &&
+		ts.IsZero() && id.InstanceID == nil &&
 		id.SequenceID == 0
 }
 
@@ -110,7 +112,7 @@ func (id ID) Equal(x ID) bool {
 	return id.Environment == x.Environment && id.Resource == x.Resource &&
 		id.InstanceID.Scheme() == x.InstanceID.Scheme() &&
 		id.InstanceID.Bytes() == x.InstanceID.Bytes() &&
-		id.Timestamp.Equal(x.Timestamp) && id.SequenceID == x.SequenceID
+		id.Timestamp == x.Timestamp && id.SequenceID == x.SequenceID
 }
 
 // Scan implements a custom database/sql.Scanner to support
@@ -227,7 +229,7 @@ func (id ID) Bytes() []byte {
 
 	x := make([]byte, decodedLen)
 	y := make([]byte, encodedLen)
-	binary.BigEndian.PutUint64(x, uint64(id.Timestamp.Unix()))
+	binary.BigEndian.PutUint64(x, uint64(id.Timestamp))
 	x[8] = id.InstanceID.Scheme()
 	copy(x[9:], iid[:])
 	binary.BigEndian.PutUint32(x[17:], id.SequenceID)

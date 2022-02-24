@@ -26,6 +26,19 @@ type InstanceID interface {
 	Bytes() [8]byte
 }
 
+type IID struct {
+	SchemeData byte
+	BytesData  [8]byte
+}
+
+func (i IID) Scheme() byte {
+	return i.SchemeData
+}
+
+func (i IID) Bytes() [8]byte {
+	return i.BytesData
+}
+
 // ParseInstanceID unmarshals a prefixed node ID into its dedicated type.
 func ParseInstanceID(b []byte) (InstanceID, error) {
 	if len(b) != 9 {
@@ -47,22 +60,20 @@ func ParseInstanceID(b []byte) (InstanceID, error) {
 	}
 }
 
-// HardwareID identifies a Node using its Mac Address and Process ID.
-type HardwareID struct {
-	MachineID net.HardwareAddr
-	ProcessID uint16
-}
-
 // NewHardwareID returns a HardwareID for the current node.
-func NewHardwareID() (*HardwareID, error) {
+func NewHardwareID() (IID, error) {
 	hwAddr, err := getHardwareAddr()
 	if err != nil {
-		return nil, err
+		return IID{}, err
 	}
 
-	return &HardwareID{
-		MachineID: hwAddr,
-		ProcessID: uint16(os.Getpid()),
+	var bd [8]byte
+	copy(bd[:], hwAddr)
+	binary.BigEndian.PutUint16(bd[6:], uint16(os.Getpid()))
+
+	return IID{
+		SchemeData: 'H',
+		BytesData:  bd,
 	}, nil
 }
 
@@ -83,43 +94,37 @@ func getHardwareAddr() (net.HardwareAddr, error) {
 }
 
 // ParseHardwareID unmarshals a HardwareID from a sequence of bytes.
-func ParseHardwareID(b []byte) (*HardwareID, error) {
+func ParseHardwareID(b []byte) (IID, error) {
 	if len(b) != 8 {
-		return nil, fmt.Errorf("expected 8 bytes, got %d", len(b))
+		return IID{}, fmt.Errorf("expected 8 bytes, got %d", len(b))
 	}
 
-	return &HardwareID{
-		MachineID: net.HardwareAddr(b[:6]),
-		ProcessID: binary.BigEndian.Uint16(b[6:]),
+	machineID := net.HardwareAddr(b[:6])
+	processID := binary.BigEndian.Uint16(b[6:])
+
+	var bd [8]byte
+	copy(bd[:], machineID)
+	binary.BigEndian.PutUint16(bd[6:], processID)
+
+	return IID{
+		SchemeData: 'H',
+		BytesData:  bd,
 	}, nil
 }
 
-func (hid *HardwareID) Scheme() byte {
-	return 'H'
-}
-
-func (hid *HardwareID) Bytes() [8]byte {
-	var b [8]byte
-	copy(b[:], hid.MachineID)
-	binary.BigEndian.PutUint16(b[6:], hid.ProcessID)
-
-	return b
-}
-
-// DockerID identifies a Node by its Docker container ID.
-type DockerID struct {
-	ContainerID []byte
-}
-
 // NewDockerID returns a DockerID for the current Docker container.
-func NewDockerID() (*DockerID, error) {
+func NewDockerID() (IID, error) {
 	cid, err := getDockerID()
 	if err != nil {
-		return nil, err
+		return IID{}, err
 	}
 
-	return &DockerID{
-		ContainerID: cid,
+	var b [8]byte
+	copy(b[:], cid)
+
+	return IID{
+		SchemeData: 'D',
+		BytesData:  b,
 	}, nil
 }
 
@@ -142,63 +147,45 @@ func getDockerID() ([]byte, error) {
 }
 
 // ParseDockerID unmarshals a DockerID from a sequence of bytes.
-func ParseDockerID(b []byte) (*DockerID, error) {
+func ParseDockerID(b []byte) (IID, error) {
 	if len(b) != 8 {
-		return nil, fmt.Errorf("expected 8 bytes, got %d", len(b))
+		return IID{}, fmt.Errorf("expected 8 bytes, got %d", len(b))
 	}
 
-	return &DockerID{
-		ContainerID: b,
+	var bd [8]byte
+	copy(bd[:], b)
+
+	return IID{
+		SchemeData: 'D',
+		BytesData:  bd,
 	}, nil
 }
 
-func (did *DockerID) Scheme() byte {
-	return 'D'
-}
-
-func (did *DockerID) Bytes() [8]byte {
-	var b [8]byte
-	copy(b[:], did.ContainerID)
-
-	return b
-}
-
-// RandomID identifies a Node by a random sequence of bytes.
-type RandomID struct {
-	Random [8]byte
-}
-
 // NewRandomID returns a RandomID initialized by a PRNG.
-func NewRandomID() (*RandomID, error) {
+func NewRandomID() (IID, error) {
 	tmp := make([]byte, 8)
 	rand.Read(tmp)
 
 	var b [8]byte
 	copy(b[:], tmp)
 
-	return &RandomID{
-		Random: b,
+	return IID{
+		SchemeData: 'R',
+		BytesData:  b,
 	}, nil
 }
 
 // ParseRandomID unmarshals a RandomID from a sequence of bytes.
-func ParseRandomID(b []byte) (*RandomID, error) {
+func ParseRandomID(b []byte) (IID, error) {
 	if len(b) != 8 {
-		return nil, fmt.Errorf("expected 8 bytes, got %d", len(b))
+		return IID{}, fmt.Errorf("expected 8 bytes, got %d", len(b))
 	}
 
 	var x [8]byte
 	copy(x[:], b)
 
-	return &RandomID{
-		Random: x,
+	return IID{
+		SchemeData: 'R',
+		BytesData:  x,
 	}, nil
-}
-
-func (rid *RandomID) Scheme() byte {
-	return 'R'
-}
-
-func (rid *RandomID) Bytes() [8]byte {
-	return rid.Random
 }
