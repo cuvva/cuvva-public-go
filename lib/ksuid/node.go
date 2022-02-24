@@ -35,7 +35,7 @@ type Node struct {
 
 	InstanceID InstanceID
 
-	ts  time.Time
+	ts  uint64
 	seq uint32
 	mu  sync.Mutex
 }
@@ -57,15 +57,15 @@ func (n *Node) Generate(resource string) (id ID) {
 
 	n.mu.Lock()
 
-	ts := time.Now().UTC()
-	if ts.Sub(n.ts) > 1*time.Second {
+	ts := uint64(time.Now().UTC().Unix())
+	if (ts - n.ts) >= 1 {
 		n.ts = ts
 		n.seq = 0
 	} else {
 		n.seq++
 	}
 
-	id.Timestamp = uint64(n.ts.Unix())
+	id.Timestamp = ts
 	id.SequenceID = n.seq
 
 	n.mu.Unlock()
