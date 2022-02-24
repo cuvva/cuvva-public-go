@@ -12,6 +12,8 @@ import (
 	"os"
 )
 
+var random *math_rand.Rand
+
 func init() {
 	var b [8]byte
 
@@ -20,7 +22,7 @@ func init() {
 		panic("cannot seed random bytes")
 	}
 
-	math_rand.Seed(int64(binary.LittleEndian.Uint64(b[:])))
+	random = math_rand.New(math_rand.NewSource(int64(binary.LittleEndian.Uint64(b[:]))))
 }
 
 type InstanceID struct {
@@ -106,7 +108,7 @@ func getDockerID() ([]byte, error) {
 // NewRandomID returns a RandomID initialized by a PRNG.
 func NewRandomID() InstanceID {
 	tmp := make([]byte, 8)
-	math_rand.Read(tmp)
+	random.Read(tmp)
 
 	var b [8]byte
 	copy(b[:], tmp)
