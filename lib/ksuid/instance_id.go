@@ -16,33 +16,23 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-// InstanceID is an interface implemented to identify a instance
-// for a node in a unique manor.
-type InstanceID interface {
-	// Scheme returns the single byte used to identify the InstanceID.
-	Scheme() byte
-
-	// Bytes returns the serialized form of the InstanceID.
-	Bytes() [8]byte
-}
-
-type IID struct {
+type InstanceID struct {
 	SchemeData byte
 	BytesData  [8]byte
 }
 
-func (i IID) Scheme() byte {
+func (i InstanceID) Scheme() byte {
 	return i.SchemeData
 }
 
-func (i IID) Bytes() [8]byte {
+func (i InstanceID) Bytes() [8]byte {
 	return i.BytesData
 }
 
 // ParseInstanceID unmarshals a prefixed node ID into its dedicated type.
 func ParseInstanceID(b []byte) (InstanceID, error) {
 	if len(b) != 9 {
-		return nil, fmt.Errorf("expected 9 bytes, got %d", len(b))
+		return InstanceID{}, fmt.Errorf("expected 9 bytes, got %d", len(b))
 	}
 
 	switch b[0] {
@@ -56,22 +46,22 @@ func ParseInstanceID(b []byte) (InstanceID, error) {
 		return ParseRandomID(b[1:])
 
 	default:
-		return nil, fmt.Errorf("unknown node id '%c'", b[0])
+		return InstanceID{}, fmt.Errorf("unknown node id '%c'", b[0])
 	}
 }
 
 // NewHardwareID returns a HardwareID for the current node.
-func NewHardwareID() (IID, error) {
+func NewHardwareID() (InstanceID, error) {
 	hwAddr, err := getHardwareAddr()
 	if err != nil {
-		return IID{}, err
+		return InstanceID{}, err
 	}
 
 	var bd [8]byte
 	copy(bd[:], hwAddr)
 	binary.BigEndian.PutUint16(bd[6:], uint16(os.Getpid()))
 
-	return IID{
+	return InstanceID{
 		SchemeData: 'H',
 		BytesData:  bd,
 	}, nil
@@ -94,9 +84,9 @@ func getHardwareAddr() (net.HardwareAddr, error) {
 }
 
 // ParseHardwareID unmarshals a HardwareID from a sequence of bytes.
-func ParseHardwareID(b []byte) (IID, error) {
+func ParseHardwareID(b []byte) (InstanceID, error) {
 	if len(b) != 8 {
-		return IID{}, fmt.Errorf("expected 8 bytes, got %d", len(b))
+		return InstanceID{}, fmt.Errorf("expected 8 bytes, got %d", len(b))
 	}
 
 	machineID := net.HardwareAddr(b[:6])
@@ -106,23 +96,23 @@ func ParseHardwareID(b []byte) (IID, error) {
 	copy(bd[:], machineID)
 	binary.BigEndian.PutUint16(bd[6:], processID)
 
-	return IID{
+	return InstanceID{
 		SchemeData: 'H',
 		BytesData:  bd,
 	}, nil
 }
 
 // NewDockerID returns a DockerID for the current Docker container.
-func NewDockerID() (IID, error) {
+func NewDockerID() (InstanceID, error) {
 	cid, err := getDockerID()
 	if err != nil {
-		return IID{}, err
+		return InstanceID{}, err
 	}
 
 	var b [8]byte
 	copy(b[:], cid)
 
-	return IID{
+	return InstanceID{
 		SchemeData: 'D',
 		BytesData:  b,
 	}, nil
@@ -147,44 +137,44 @@ func getDockerID() ([]byte, error) {
 }
 
 // ParseDockerID unmarshals a DockerID from a sequence of bytes.
-func ParseDockerID(b []byte) (IID, error) {
+func ParseDockerID(b []byte) (InstanceID, error) {
 	if len(b) != 8 {
-		return IID{}, fmt.Errorf("expected 8 bytes, got %d", len(b))
+		return InstanceID{}, fmt.Errorf("expected 8 bytes, got %d", len(b))
 	}
 
 	var bd [8]byte
 	copy(bd[:], b)
 
-	return IID{
+	return InstanceID{
 		SchemeData: 'D',
 		BytesData:  bd,
 	}, nil
 }
 
 // NewRandomID returns a RandomID initialized by a PRNG.
-func NewRandomID() (IID, error) {
+func NewRandomID() (InstanceID, error) {
 	tmp := make([]byte, 8)
 	rand.Read(tmp)
 
 	var b [8]byte
 	copy(b[:], tmp)
 
-	return IID{
+	return InstanceID{
 		SchemeData: 'R',
 		BytesData:  b,
 	}, nil
 }
 
 // ParseRandomID unmarshals a RandomID from a sequence of bytes.
-func ParseRandomID(b []byte) (IID, error) {
+func ParseRandomID(b []byte) (InstanceID, error) {
 	if len(b) != 8 {
-		return IID{}, fmt.Errorf("expected 8 bytes, got %d", len(b))
+		return InstanceID{}, fmt.Errorf("expected 8 bytes, got %d", len(b))
 	}
 
 	var x [8]byte
 	copy(x[:], b)
 
-	return IID{
+	return InstanceID{
 		SchemeData: 'R',
 		BytesData:  x,
 	}, nil
