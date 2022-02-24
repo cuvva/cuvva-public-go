@@ -2,18 +2,25 @@ package ksuid
 
 import (
 	"bytes"
+	crypto_rand "crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
+	math_rand "math/rand"
 	"net"
 	"os"
-	"time"
 )
 
 func init() {
-	rand.Seed(time.Now().UnixNano())
+	var b [8]byte
+
+	_, err := crypto_rand.Read(b[:])
+	if err != nil {
+		panic("cannot seed random bytes")
+	}
+
+	math_rand.Seed(int64(binary.LittleEndian.Uint64(b[:])))
 }
 
 type InstanceID struct {
@@ -99,7 +106,7 @@ func getDockerID() ([]byte, error) {
 // NewRandomID returns a RandomID initialized by a PRNG.
 func NewRandomID() (InstanceID, error) {
 	tmp := make([]byte, 8)
-	rand.Read(tmp)
+	math_rand.Read(tmp)
 
 	var b [8]byte
 	copy(b[:], tmp)
