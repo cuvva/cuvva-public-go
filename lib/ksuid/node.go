@@ -65,7 +65,7 @@ func (n *Node) Generate(resource string) (id ID) {
 		n.seq++
 	}
 
-	id.Timestamp = n.ts.Unix()
+	id.Timestamp = uint64(n.ts.Unix())
 	id.SequenceID = n.seq
 
 	n.mu.Unlock()

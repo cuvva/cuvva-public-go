@@ -17,7 +17,7 @@ type ID struct {
 	Environment string
 	Resource    string
 
-	Timestamp  int64
+	Timestamp  uint64
 	InstanceID InstanceID
 	SequenceID uint32
 }
@@ -62,7 +62,7 @@ func Parse(str string) (id ID, err error) {
 		return
 	}
 
-	id.Timestamp = int64(binary.BigEndian.Uint64(dst[:8]))
+	id.Timestamp = uint64(binary.BigEndian.Uint64(dst[:8]))
 	id.InstanceID, err = ParseInstanceID(dst[8:17])
 	id.SequenceID = binary.BigEndian.Uint32(dst[17:])
 
