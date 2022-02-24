@@ -15,10 +15,7 @@ func init() {
 	if err != nil {
 		iid, err = NewHardwareID()
 		if err != nil {
-			iid, err = NewRandomID()
-			if err != nil {
-				panic(err)
-			}
+			iid = NewRandomID()
 		}
 	}
 

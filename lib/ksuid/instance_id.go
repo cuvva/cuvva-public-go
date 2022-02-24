@@ -104,7 +104,7 @@ func getDockerID() ([]byte, error) {
 }
 
 // NewRandomID returns a RandomID initialized by a PRNG.
-func NewRandomID() (InstanceID, error) {
+func NewRandomID() InstanceID {
 	tmp := make([]byte, 8)
 	math_rand.Read(tmp)
 
@@ -114,5 +114,5 @@ func NewRandomID() (InstanceID, error) {
 	return InstanceID{
 		SchemeData: 'R',
 		BytesData:  b,
-	}, nil
+	}
 }
