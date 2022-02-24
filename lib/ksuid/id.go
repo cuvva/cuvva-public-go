@@ -63,7 +63,8 @@ func Parse(str string) (id ID, err error) {
 	}
 
 	id.Timestamp = binary.BigEndian.Uint64(dst[:8])
-	id.InstanceID, err = ParseInstanceID(dst[8:17])
+	id.InstanceID.SchemeData = dst[8]
+	copy(id.InstanceID.BytesData[:], dst[9:17])
 	id.SequenceID = binary.BigEndian.Uint32(dst[17:])
 
 	return

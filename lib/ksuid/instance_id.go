@@ -29,27 +29,6 @@ func (i InstanceID) Bytes() [8]byte {
 	return i.BytesData
 }
 
-// ParseInstanceID unmarshals a prefixed node ID into its dedicated type.
-func ParseInstanceID(b []byte) (InstanceID, error) {
-	if len(b) != 9 {
-		return InstanceID{}, fmt.Errorf("expected 9 bytes, got %d", len(b))
-	}
-
-	switch b[0] {
-	case 'H':
-		return ParseHardwareID(b[1:])
-
-	case 'D':
-		return ParseDockerID(b[1:])
-
-	case 'R':
-		return ParseRandomID(b[1:])
-
-	default:
-		return InstanceID{}, fmt.Errorf("unknown node id '%c'", b[0])
-	}
-}
-
 // NewHardwareID returns a HardwareID for the current node.
 func NewHardwareID() (InstanceID, error) {
 	hwAddr, err := getHardwareAddr()
@@ -81,25 +60,6 @@ func getHardwareAddr() (net.HardwareAddr, error) {
 	}
 
 	return nil, fmt.Errorf("no hardware addr available")
-}
-
-// ParseHardwareID unmarshals a HardwareID from a sequence of bytes.
-func ParseHardwareID(b []byte) (InstanceID, error) {
-	if len(b) != 8 {
-		return InstanceID{}, fmt.Errorf("expected 8 bytes, got %d", len(b))
-	}
-
-	machineID := net.HardwareAddr(b[:6])
-	processID := binary.BigEndian.Uint16(b[6:])
-
-	var bd [8]byte
-	copy(bd[:], machineID)
-	binary.BigEndian.PutUint16(bd[6:], processID)
-
-	return InstanceID{
-		SchemeData: 'H',
-		BytesData:  bd,
-	}, nil
 }
 
 // NewDockerID returns a DockerID for the current Docker container.
@@ -136,21 +96,6 @@ func getDockerID() ([]byte, error) {
 	return dst, nil
 }
 
-// ParseDockerID unmarshals a DockerID from a sequence of bytes.
-func ParseDockerID(b []byte) (InstanceID, error) {
-	if len(b) != 8 {
-		return InstanceID{}, fmt.Errorf("expected 8 bytes, got %d", len(b))
-	}
-
-	var bd [8]byte
-	copy(bd[:], b)
-
-	return InstanceID{
-		SchemeData: 'D',
-		BytesData:  bd,
-	}, nil
-}
-
 // NewRandomID returns a RandomID initialized by a PRNG.
 func NewRandomID() (InstanceID, error) {
 	tmp := make([]byte, 8)
@@ -162,20 +107,5 @@ func NewRandomID() (InstanceID, error) {
 	return InstanceID{
 		SchemeData: 'R',
 		BytesData:  b,
-	}, nil
-}
-
-// ParseRandomID unmarshals a RandomID from a sequence of bytes.
-func ParseRandomID(b []byte) (InstanceID, error) {
-	if len(b) != 8 {
-		return InstanceID{}, fmt.Errorf("expected 8 bytes, got %d", len(b))
-	}
-
-	var x [8]byte
-	copy(x[:], b)
-
-	return InstanceID{
-		SchemeData: 'R',
-		BytesData:  x,
 	}, nil
 }
