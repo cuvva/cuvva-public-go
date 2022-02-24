@@ -1,7 +1,6 @@
 package ksuid
 
 import (
-	"net"
 	"testing"
 	"time"
 
@@ -53,10 +52,10 @@ func TestParse(t *testing.T) {
 			"Bare", []byte("000000BPG6Lks9tQoAiJYrBRSXPX6"),
 			ID{
 				Environment: Production,
-				Timestamp:   time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC),
-				InstanceID: &HardwareID{
-					MachineID: net.HardwareAddr{0x8C, 0x85, 0x90, 0x5F, 0x44, 0xCA},
-					ProcessID: 32985,
+				Timestamp:   uint64(time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC).Unix()),
+				InstanceID: InstanceID{
+					SchemeData: 'H',
+					BytesData:  [8]byte{0x8c, 0x85, 0x90, 0x5f, 0x44, 0xca, 0x80, 0xd9},
 				},
 				SequenceID: 0,
 			}, nil,
@@ -66,10 +65,10 @@ func TestParse(t *testing.T) {
 			ID{
 				Environment: Production,
 				Resource:    "user",
-				Timestamp:   time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC),
-				InstanceID: &HardwareID{
-					MachineID: net.HardwareAddr{0x8C, 0x85, 0x90, 0x5F, 0x44, 0xCA},
-					ProcessID: 32985,
+				Timestamp:   uint64(time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC).Unix()),
+				InstanceID: InstanceID{
+					SchemeData: 'H',
+					BytesData:  [8]byte{0x8c, 0x85, 0x90, 0x5f, 0x44, 0xca, 0x80, 0xd9},
 				},
 				SequenceID: 0,
 			}, nil,
@@ -79,10 +78,10 @@ func TestParse(t *testing.T) {
 			ID{
 				Environment: "test",
 				Resource:    "user",
-				Timestamp:   time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC),
-				InstanceID: &HardwareID{
-					MachineID: net.HardwareAddr{0x8C, 0x85, 0x90, 0x5F, 0x44, 0xCA},
-					ProcessID: 32985,
+				Timestamp:   uint64(time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC).Unix()),
+				InstanceID: InstanceID{
+					SchemeData: 'H',
+					BytesData:  [8]byte{0x8c, 0x85, 0x90, 0x5f, 0x44, 0xca, 0x80, 0xd9},
 				},
 				SequenceID: 0,
 			}, nil,
@@ -122,10 +121,10 @@ func TestID(t *testing.T) {
 				"Bytes", []byte("000000BPG6Lks9tQoAiJYrBRSXPX6"),
 				ID{
 					Environment: Production,
-					Timestamp:   time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC),
-					InstanceID: &HardwareID{
-						MachineID: net.HardwareAddr{0x8C, 0x85, 0x90, 0x5F, 0x44, 0xCA},
-						ProcessID: 32985,
+					Timestamp:   uint64(time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC).Unix()),
+					InstanceID: InstanceID{
+						SchemeData: 'H',
+						BytesData:  [8]byte{0x8c, 0x85, 0x90, 0x5f, 0x44, 0xca, 0x80, 0xd9},
 					},
 					SequenceID: 0,
 				}, nil,
@@ -134,10 +133,10 @@ func TestID(t *testing.T) {
 				"String", "000000BPG6Lks9tQoAiJYrBRSXPX6",
 				ID{
 					Environment: Production,
-					Timestamp:   time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC),
-					InstanceID: &HardwareID{
-						MachineID: net.HardwareAddr{0x8C, 0x85, 0x90, 0x5F, 0x44, 0xCA},
-						ProcessID: 32985,
+					Timestamp:   uint64(time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC).Unix()),
+					InstanceID: InstanceID{
+						SchemeData: 'H',
+						BytesData:  [8]byte{0x8c, 0x85, 0x90, 0x5f, 0x44, 0xca, 0x80, 0xd9},
 					},
 					SequenceID: 0,
 				}, nil,
@@ -177,10 +176,10 @@ func TestID(t *testing.T) {
 				"Bare", []byte(`"000000BPG6Lks9tQoAiJYrBRSXPX6"`),
 				ID{
 					Environment: Production,
-					Timestamp:   time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC),
-					InstanceID: &HardwareID{
-						MachineID: net.HardwareAddr{0x8C, 0x85, 0x90, 0x5F, 0x44, 0xCA},
-						ProcessID: 32985,
+					Timestamp:   uint64(time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC).Unix()),
+					InstanceID: InstanceID{
+						SchemeData: 'H',
+						BytesData:  [8]byte{0x8c, 0x85, 0x90, 0x5f, 0x44, 0xca, 0x80, 0xd9},
 					},
 					SequenceID: 0,
 				}, nil,
@@ -190,10 +189,10 @@ func TestID(t *testing.T) {
 				ID{
 					Resource:    "user",
 					Environment: Production,
-					Timestamp:   time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC),
-					InstanceID: &HardwareID{
-						MachineID: net.HardwareAddr{0x8C, 0x85, 0x90, 0x5F, 0x44, 0xCA},
-						ProcessID: 32985,
+					Timestamp:   uint64(time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC).Unix()),
+					InstanceID: InstanceID{
+						SchemeData: 'H',
+						BytesData:  [8]byte{0x8c, 0x85, 0x90, 0x5f, 0x44, 0xca, 0x80, 0xd9},
 					},
 					SequenceID: 0,
 				}, nil,
@@ -203,10 +202,10 @@ func TestID(t *testing.T) {
 				ID{
 					Resource:    "user",
 					Environment: "test",
-					Timestamp:   time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC),
-					InstanceID: &HardwareID{
-						MachineID: net.HardwareAddr{0x8C, 0x85, 0x90, 0x5F, 0x44, 0xCA},
-						ProcessID: 32985,
+					Timestamp:   uint64(time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC).Unix()),
+					InstanceID: InstanceID{
+						SchemeData: 'H',
+						BytesData:  [8]byte{0x8c, 0x85, 0x90, 0x5f, 0x44, 0xca, 0x80, 0xd9},
 					},
 					SequenceID: 0,
 				}, nil,
@@ -238,10 +237,10 @@ func TestID(t *testing.T) {
 		}{
 			{
 				"Bare", ID{
-					Timestamp: time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC),
-					InstanceID: &HardwareID{
-						MachineID: net.HardwareAddr{0x8C, 0x85, 0x90, 0x5F, 0x44, 0xCA},
-						ProcessID: 32985,
+					Timestamp: uint64(time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC).Unix()),
+					InstanceID: InstanceID{
+						SchemeData: 'H',
+						BytesData:  [8]byte{0x8c, 0x85, 0x90, 0x5f, 0x44, 0xca, 0x80, 0xd9},
 					},
 					SequenceID: 0,
 				}, []byte("000000BPG6Lks9tQoAiJYrBRSXPX6"), []byte(`"000000BPG6Lks9tQoAiJYrBRSXPX6"`),
@@ -249,10 +248,10 @@ func TestID(t *testing.T) {
 			{
 				"BareEnvironment", ID{
 					Environment: "test",
-					Timestamp:   time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC),
-					InstanceID: &HardwareID{
-						MachineID: net.HardwareAddr{0x8C, 0x85, 0x90, 0x5F, 0x44, 0xCA},
-						ProcessID: 32985,
+					Timestamp:   uint64(time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC).Unix()),
+					InstanceID: InstanceID{
+						SchemeData: 'H',
+						BytesData:  [8]byte{0x8c, 0x85, 0x90, 0x5f, 0x44, 0xca, 0x80, 0xd9},
 					},
 					SequenceID: 0,
 				}, []byte("000000BPG6Lks9tQoAiJYrBRSXPX6"), []byte(`"000000BPG6Lks9tQoAiJYrBRSXPX6"`),
@@ -260,10 +259,10 @@ func TestID(t *testing.T) {
 			{
 				"Resource", ID{
 					Resource:  "user",
-					Timestamp: time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC),
-					InstanceID: &HardwareID{
-						MachineID: net.HardwareAddr{0x8C, 0x85, 0x90, 0x5F, 0x44, 0xCA},
-						ProcessID: 32985,
+					Timestamp: uint64(time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC).Unix()),
+					InstanceID: InstanceID{
+						SchemeData: 'H',
+						BytesData:  [8]byte{0x8c, 0x85, 0x90, 0x5f, 0x44, 0xca, 0x80, 0xd9},
 					},
 					SequenceID: 0,
 				}, []byte("user_000000BPG6Lks9tQoAiJYrBRSXPX6"), []byte(`"user_000000BPG6Lks9tQoAiJYrBRSXPX6"`),
@@ -272,10 +271,10 @@ func TestID(t *testing.T) {
 				"ResourceProduction", ID{
 					Environment: Production,
 					Resource:    "user",
-					Timestamp:   time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC),
-					InstanceID: &HardwareID{
-						MachineID: net.HardwareAddr{0x8C, 0x85, 0x90, 0x5F, 0x44, 0xCA},
-						ProcessID: 32985,
+					Timestamp:   uint64(time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC).Unix()),
+					InstanceID: InstanceID{
+						SchemeData: 'H',
+						BytesData:  [8]byte{0x8c, 0x85, 0x90, 0x5f, 0x44, 0xca, 0x80, 0xd9},
 					},
 					SequenceID: 0,
 				}, []byte("user_000000BPG6Lks9tQoAiJYrBRSXPX6"), []byte(`"user_000000BPG6Lks9tQoAiJYrBRSXPX6"`),
@@ -284,10 +283,10 @@ func TestID(t *testing.T) {
 				"ResourceEnvironment", ID{
 					Resource:    "user",
 					Environment: "test",
-					Timestamp:   time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC),
-					InstanceID: &HardwareID{
-						MachineID: net.HardwareAddr{0x8C, 0x85, 0x90, 0x5F, 0x44, 0xCA},
-						ProcessID: 32985,
+					Timestamp:   uint64(time.Date(2018, 4, 5, 16, 53, 42, 0, time.UTC).Unix()),
+					InstanceID: InstanceID{
+						SchemeData: 'H',
+						BytesData:  [8]byte{0x8c, 0x85, 0x90, 0x5f, 0x44, 0xca, 0x80, 0xd9},
 					},
 					SequenceID: 0,
 				}, []byte("test_user_000000BPG6Lks9tQoAiJYrBRSXPX6"), []byte(`"test_user_000000BPG6Lks9tQoAiJYrBRSXPX6"`),
@@ -311,4 +310,21 @@ func TestID(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestComparable(t *testing.T) {
+	id := Generate("compare")
+	remade, err := Parse(id.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if id != remade {
+		t.Error("IDs are not equal")
+	}
+
+	id2 := Generate("compare")
+	if id == id2 {
+		t.Error("IDs are equal!")
+	}
 }
