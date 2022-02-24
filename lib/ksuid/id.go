@@ -5,7 +5,6 @@ import (
 	"database/sql/driver"
 	"encoding/binary"
 	"encoding/json"
-	"time"
 
 	"github.com/jamescun/basex"
 	"go.mongodb.org/mongo-driver/bson"
@@ -96,10 +95,8 @@ func splitPrefixID(s []byte) (environment, resource string, id []byte) {
 
 // IsZero returns true if id has not yet been initialized.
 func (id ID) IsZero() bool {
-	ts := time.Unix(id.Timestamp, 0)
-
 	return id.Environment == "" && id.Resource == "" &&
-		ts.IsZero() && id.InstanceID == nil &&
+		id.Timestamp == 0 && id.InstanceID == nil &&
 		id.SequenceID == 0
 }
 
