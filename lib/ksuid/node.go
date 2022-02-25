@@ -1,8 +1,11 @@
 package ksuid
 
 import (
+	"context"
 	"sync"
 	"time"
+
+	"github.com/cuvva/cuvva-public-go/lib/servicecontext"
 )
 
 var exportedNode *Node
@@ -46,9 +49,8 @@ func NewNode(environment string, instanceID InstanceID) *Node {
 	}
 }
 
-// Generate returns a new ID for the machine and resource configured.
-func (n *Node) Generate(resource string) (id ID) {
-	id.Environment = n.Environment
+func (n *Node) generate(resource, environment string) (id ID) {
+	id.Environment = environment
 	id.Resource = resource
 	id.InstanceID = n.InstanceID
 
@@ -68,6 +70,20 @@ func (n *Node) Generate(resource string) (id ID) {
 	n.mu.Unlock()
 
 	return
+}
+
+// Generate returns a new ID for the machine and resource configured.
+func (n *Node) Generate(resource string) ID {
+	return n.generate(resource, n.Environment)
+}
+
+func (n *Node) GenerateContext(ctx context.Context, resource string) ID {
+	info := servicecontext.GetContext(ctx)
+	if info == nil {
+		return n.Generate(resource)
+	}
+
+	return n.generate(resource, info.Environment)
 }
 
 // SetEnvironment overrides the default environment name in the exported node.
