@@ -47,9 +47,10 @@ func NewNode(environment string, instanceID InstanceID) *Node {
 
 // Generate returns a new ID for the machine and resource configured.
 func (n *Node) Generate(ctx context.Context, resource string) (id ID) {
-	info := servicecontext.GetContext(ctx)
-	if info != nil {
+	if info := servicecontext.GetContext(ctx); info != nil {
 		id.Environment = info.Environment
+	} else {
+		id.Environment = Production
 	}
 
 	id.Resource = resource
