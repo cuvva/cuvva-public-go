@@ -17,6 +17,7 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readconcern"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 	"golang.org/x/sync/errgroup"
@@ -74,9 +75,10 @@ func (m MongoDB) Options() (opts *options.ClientOptions, dbName string, err erro
 		return
 	}
 
-	// all Go services use majority writes, and this is unlikely to change
+	// all Go services use majority reads/writes, and this is unlikely to change
 	// if it does change, switch to accepting as an argument
-	opts.WriteConcern = writeconcern.New(writeconcern.WMajority())
+	opts.SetReadConcern(readconcern.Majority())
+	opts.SetWriteConcern(writeconcern.New(writeconcern.WMajority()))
 
 	cs, err := connstring.Parse(m.URI)
 	if err != nil {
