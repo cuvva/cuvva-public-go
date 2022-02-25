@@ -46,7 +46,7 @@ func GetOrSetRequestID(ctx context.Context) (context.Context, string) {
 		return ctx, requestID
 	}
 
-	requestID = ksuid.Generate("req").String()
+	requestID = ksuid.Generate(ctx, "req").String()
 
 	ctx = SetRequestIDContext(ctx, requestID)
 	return ctx, requestID
@@ -62,7 +62,7 @@ func RequestID(next http.Handler) http.Handler {
 		requestID := r.Header.Get(requestIDHeader)
 		if requestID == "" {
 			// if no Request-ID is passed, generate/originate a new one
-			requestID = ksuid.Generate("req").String()
+			requestID = ksuid.Generate(r.Context(), "req").String()
 		}
 
 		w.Header().Set(requestIDHeader, requestID)
