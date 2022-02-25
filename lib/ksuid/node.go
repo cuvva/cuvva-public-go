@@ -31,8 +31,6 @@ const Production = "prod"
 
 // Node contains metadata used for ksuid generation for a specific machine.
 type Node struct {
-	Environment string
-
 	InstanceID InstanceID
 
 	ts  uint64
@@ -43,8 +41,6 @@ type Node struct {
 // NewNode returns a ID generator for the current machine.
 func NewNode(environment string, instanceID InstanceID) *Node {
 	return &Node{
-		Environment: environment,
-
 		InstanceID: instanceID,
 	}
 }
@@ -52,9 +48,7 @@ func NewNode(environment string, instanceID InstanceID) *Node {
 // Generate returns a new ID for the machine and resource configured.
 func (n *Node) Generate(ctx context.Context, resource string) (id ID) {
 	info := servicecontext.GetContext(ctx)
-	if info == nil {
-		id.Environment = n.Environment
-	} else {
+	if info != nil {
 		id.Environment = info.Environment
 	}
 
@@ -77,12 +71,6 @@ func (n *Node) Generate(ctx context.Context, resource string) (id ID) {
 	n.mu.Unlock()
 
 	return
-}
-
-// SetEnvironment overrides the default environment name in the exported node.
-// This will effect all invocations of the exported Generate function.
-func SetEnvironment(environment string) {
-	exportedNode.Environment = environment
 }
 
 // SetInstanceID overrides the default instance id in the exported node.

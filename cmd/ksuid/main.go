@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/cuvva/cuvva-public-go/lib/ksuid"
+	"github.com/cuvva/cuvva-public-go/lib/servicecontext"
 	"github.com/spf13/cobra"
 )
 
@@ -30,10 +31,10 @@ var GenerateCommand = &cobra.Command{
 	Short:   "generate one or more ksuid",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		ksuid.SetEnvironment(generateEnvironment)
+		ctx := servicecontext.SetContext(cmd.Context(), "ksuid", generateEnvironment)
 
 		for n := 0; n < generateCount; n++ {
-			id := ksuid.Generate(cmd.Context(), generateResource)
+			id := ksuid.Generate(ctx, generateResource)
 
 			fmt.Println(id.String())
 		}
