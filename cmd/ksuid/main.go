@@ -33,7 +33,7 @@ var GenerateCommand = &cobra.Command{
 		ksuid.SetEnvironment(generateEnvironment)
 
 		for n := 0; n < generateCount; n++ {
-			id := ksuid.Generate(generateResource)
+			id := ksuid.Generate(cmd.Context(), generateResource)
 
 			fmt.Println(id.String())
 		}

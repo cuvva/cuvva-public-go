@@ -1,6 +1,7 @@
 package ab
 
 import (
+	"context"
 	"testing"
 
 	"github.com/cuvva/cuvva-public-go/lib/ksuid"
@@ -37,8 +38,8 @@ func TestCheck(t *testing.T) {
 	}
 }
 
-var testID = ksuid.Generate("test").String()
-var userID = ksuid.Generate("user").String()
+var testID = ksuid.Generate(context.Background(), "test").String()
+var userID = ksuid.Generate(context.Background(), "user").String()
 
 func BenchmarkParse(b *testing.B) {
 	for i := 0; i < b.N; i++ {

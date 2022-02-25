@@ -53,9 +53,9 @@ func NewNode(environment string, instanceID InstanceID) *Node {
 func (n *Node) Generate(ctx context.Context, resource string) (id ID) {
 	info := servicecontext.GetContext(ctx)
 	if info == nil {
-		id.Environment = info.Environment
-	} else {
 		id.Environment = n.Environment
+	} else {
+		id.Environment = info.Environment
 	}
 
 	id.Resource = resource

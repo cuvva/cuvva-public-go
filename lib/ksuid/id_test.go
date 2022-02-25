@@ -1,6 +1,7 @@
 package ksuid
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -313,7 +314,7 @@ func TestID(t *testing.T) {
 }
 
 func TestComparable(t *testing.T) {
-	id := Generate("compare")
+	id := Generate(context.Background(), "compare")
 	remade, err := Parse(id.String())
 	if err != nil {
 		t.Fatal(err)
@@ -323,7 +324,7 @@ func TestComparable(t *testing.T) {
 		t.Error("IDs are not equal")
 	}
 
-	id2 := Generate("compare")
+	id2 := Generate(context.Background(), "compare")
 	if id == id2 {
 		t.Error("IDs are equal!")
 	}
