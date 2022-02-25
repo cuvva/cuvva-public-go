@@ -49,8 +49,15 @@ func NewNode(environment string, instanceID InstanceID) *Node {
 	}
 }
 
-func (n *Node) generate(resource, environment string) (id ID) {
-	id.Environment = environment
+// Generate returns a new ID for the machine and resource configured.
+func (n *Node) Generate(ctx context.Context, resource string) (id ID) {
+	info := servicecontext.GetContext(ctx)
+	if info == nil {
+		id.Environment = info.Environment
+	} else {
+		id.Environment = n.Environment
+	}
+
 	id.Resource = resource
 	id.InstanceID = n.InstanceID
 
@@ -72,20 +79,6 @@ func (n *Node) generate(resource, environment string) (id ID) {
 	return
 }
 
-// Generate returns a new ID for the machine and resource configured.
-func (n *Node) Generate(resource string) ID {
-	return n.generate(resource, n.Environment)
-}
-
-func (n *Node) GenerateContext(ctx context.Context, resource string) ID {
-	info := servicecontext.GetContext(ctx)
-	if info == nil {
-		return n.Generate(resource)
-	}
-
-	return n.generate(resource, info.Environment)
-}
-
 // SetEnvironment overrides the default environment name in the exported node.
 // This will effect all invocations of the exported Generate function.
 func SetEnvironment(environment string) {
@@ -99,6 +92,6 @@ func SetInstanceID(instanceID InstanceID) {
 }
 
 // Generate returns a new ID for the current machine and resource configured.
-func Generate(resource string) ID {
-	return exportedNode.Generate(resource)
+func Generate(ctx context.Context, resource string) ID {
+	return exportedNode.Generate(ctx, resource)
 }
