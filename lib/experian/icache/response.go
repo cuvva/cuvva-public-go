@@ -56,6 +56,7 @@ type ConsumerSummaryPremiumValueData struct {
 	AddrLink          Map
 	AgeDOB            Map `xml:"AgeDoB"`
 	CII               Map
+	Mosaic            Map
 	AdditDelphiBlocks AdditDelphiBlocks
 }
 
