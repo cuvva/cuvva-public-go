@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/cuvva/cuvva-public-go/lib/slicecontains"
 	"github.com/pkg/errors"
 )
 
@@ -153,6 +154,9 @@ func (e E) Value() (driver.Value, error) {
 	return json.Marshal(e)
 }
 
+// WrapIfNotCher will not wrap the error if it is any cher except unknown.
+//
+// Unless you don't know the codes you could get back, you should use WrapIfNotCherCodes.
 func WrapIfNotCher(err error, msg string) error {
 	if err == nil {
 		return nil
@@ -160,6 +164,24 @@ func WrapIfNotCher(err error, msg string) error {
 
 	var cErr E
 	if errors.As(err, &cErr) {
+		if cErr.Code == Unknown {
+			return errors.Wrap(err, msg)
+		}
+
+		return cErr
+	}
+
+	return errors.Wrap(err, msg)
+}
+
+// WrapIfNotCherCodes will wrap an error unless it is a cher with specific codes.
+func WrapIfNotCherCodes(err error, msg string, codes []string) error {
+	if err == nil {
+		return nil
+	}
+
+	var cErr E
+	if errors.As(err, &cErr) && slicecontains.String(codes, cErr.Code) {
 		return cErr
 	}
 
