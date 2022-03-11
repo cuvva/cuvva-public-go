@@ -18,8 +18,8 @@ type Job struct {
 	EmploymentType        string        `json:"employment_type"`
 	Department            JobDepartment `json:"department"`
 	ReportingTo           string        `json:"reporting_to"`
-	CompensationMinimum   int           `json:"compensation_minimum"`
-	CompensationMaximum   int           `json:"compensation_maximum"`
+	CompensationMinimum   float64       `json:"compensation_minimum"`
+	CompensationMaximum   float64       `json:"compensation_maximum"`
 	CompensationCurrency  string        `json:"compensation_currency"`
 	CompensationFrequency string        `json:"compensation_frequency"`
 	CompensationVisible   bool          `json:"compensation_visible"`
