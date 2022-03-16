@@ -33,7 +33,7 @@ func cloneContext(ctx context.Context) context.Context {
 	return forkedContext{ctx}
 }
 
-// maps are type aware, define a custom string type for context keys
+// ContextKey maps are type aware, define a custom string type for context keys
 // to prevent collisions with third-party context that uses the same key.
 type ContextKey string
 
@@ -44,12 +44,12 @@ func ForkContext(ctx context.Context, fn func(context.Context) error) {
 	go func() {
 		err := fn(newCtx)
 		if err != nil {
-			clog.Get(newCtx).WithError(err).Log(clog.DetermineLevel(err), "forked context errored")
+			clog.Get(newCtx).WithError(err).Log(clog.DetermineLevel(err, true), "forked context errored")
 		}
 	}()
 }
 
-// ForkContext provides a callback function with a new context inheriting values from the request context with a timeout, and will log any error returned by the callback
+// ForkContextWithTimeout provides a callback function with a new context inheriting values from the request context with a timeout, and will log any error returned by the callback
 func ForkContextWithTimeout(ctx context.Context, timeout time.Duration, fn func(context.Context) error) {
 	newCtx, cancel := context.WithTimeout(cloneContext(ctx), timeout)
 
@@ -57,7 +57,7 @@ func ForkContextWithTimeout(ctx context.Context, timeout time.Duration, fn func(
 		defer cancel()
 		err := fn(newCtx)
 		if err != nil {
-			clog.Get(newCtx).WithError(err).Log(clog.DetermineLevel(err), "forked context errored")
+			clog.Get(newCtx).WithError(err).Log(clog.DetermineLevel(err, true), "forked context errored")
 		}
 	}()
 }

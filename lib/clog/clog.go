@@ -99,7 +99,8 @@ func (c Config) Configure(ctx context.Context) (log *logrus.Entry) {
 // context itself can store a pointer to a ContextLogger, so it doesn't need
 // replacing each time new fields are added to the logger
 type ContextLogger struct {
-	entry *logrus.Entry
+	entry            *logrus.Entry
+	timeoutsAsErrors bool
 }
 
 // NewContextLogger creates a new (mutable) ContextLogger instance from an (immutable) logrus Entry
@@ -207,8 +208,28 @@ func SetError(ctx context.Context, err error) error {
 	return nil
 }
 
+// ConfigureTimeoutsAsErrors changes to default behaviour of logging timeouts as info, to log them as errors
+func ConfigureTimeoutsAsErrors(ctx context.Context) {
+	ctxLogger := getContextLogger(ctx)
+	if ctxLogger == nil {
+		return
+	}
+
+	ctxLogger.timeoutsAsErrors = true
+}
+
+// TimeoutsAsErrors determines whether ConfigureTimeoutsAsErrors was called on the context
+func TimeoutsAsErrors(ctx context.Context) bool {
+	ctxLogger := getContextLogger(ctx)
+	if ctxLogger == nil {
+		return false
+	}
+
+	return ctxLogger.timeoutsAsErrors
+}
+
 // DetermineLevel returns a suggested logrus Level type for a given error
-func DetermineLevel(err error) logrus.Level {
+func DetermineLevel(err error, timeoutsAsErrors bool) logrus.Level {
 	if cherError, ok := err.(cher.E); ok {
 		switch cherError.Code {
 
@@ -216,6 +237,9 @@ func DetermineLevel(err error) logrus.Level {
 		case cher.BadRequest, cher.RequestTimeout:
 			return logrus.WarnLevel
 		case cher.ContextCanceled:
+			if timeoutsAsErrors {
+				return logrus.ErrorLevel
+			}
 			return logrus.InfoLevel
 		case cher.Unknown, cher.CoercionError:
 			return logrus.ErrorLevel
