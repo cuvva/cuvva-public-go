@@ -33,3 +33,8 @@ issues:
     - "should not use dot imports" # exclude for component tests
   max-per-linter: 0
   max-same-issues: 0
+
+  exclude-rules:
+    - path: tools/cdep/
+      linters:
+        - goconst
