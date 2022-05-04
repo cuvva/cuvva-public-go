@@ -40,7 +40,7 @@ func TestMongoDBOptions(t *testing.T) {
 
 	assert.Equal(t, dbName, "demo")
 	assert.Equal(t, opts.Hosts, []string{"127.0.0.1"})
-	assert.Equal(t, opts.WriteConcern, writeconcern.New(writeconcern.WMajority()))
+	assert.Equal(t, opts.WriteConcern, writeconcern.New(writeconcern.WMajority(), writeconcern.J(true)))
 
 	assert.Equal(t, opts.Auth, &options.Credential{
 		AuthSource:  "admin",

@@ -78,7 +78,7 @@ func (m MongoDB) Options() (opts *options.ClientOptions, dbName string, err erro
 	// all Go services use majority reads/writes, and this is unlikely to change
 	// if it does change, switch to accepting as an argument
 	opts.SetReadConcern(readconcern.Majority())
-	opts.SetWriteConcern(writeconcern.New(writeconcern.WMajority()))
+	opts.SetWriteConcern(writeconcern.New(writeconcern.WMajority(), writeconcern.J(true)))
 
 	cs, err := connstring.Parse(m.URI)
 	if err != nil {
