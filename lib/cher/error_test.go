@@ -144,35 +144,31 @@ func TestWrapIfNotCherCodes(t *testing.T) {
 	type testCase struct {
 		name   string
 		msg    string
-		codes  []string
 		err    error
 		expect func(*testing.T, error)
 	}
 
 	tests := []testCase{
 		{
-			name:  "nil",
-			msg:   "foo",
-			codes: []string{"code_1"},
-			err:   nil,
+			name: "nil",
+			msg:  "foo",
+			err:  nil,
 			expect: func(t *testing.T, err error) {
 				assert.NoError(t, err)
 			},
 		},
 		{
-			name:  "err",
-			msg:   "foo",
-			codes: []string{"code_1"},
-			err:   fmt.Errorf("nope"),
+			name: "err",
+			msg:  "foo",
+			err:  fmt.Errorf("nope"),
 			expect: func(t *testing.T, err error) {
 				assert.EqualError(t, err, "foo: nope")
 			},
 		},
 		{
-			name:  "cher specified code",
-			msg:   "foo",
-			codes: []string{"code_1"},
-			err:   New("code_1", nil),
+			name: "cher specified code",
+			msg:  "foo",
+			err:  New("code_1", nil),
 			expect: func(t *testing.T, err error) {
 				cErr, ok := err.(E)
 				assert.True(t, ok)
@@ -180,10 +176,9 @@ func TestWrapIfNotCherCodes(t *testing.T) {
 			},
 		},
 		{
-			name:  "cher other code",
-			msg:   "foo",
-			codes: []string{"unknown"},
-			err:   New("unknown", nil),
+			name: "cher other code",
+			msg:  "foo",
+			err:  New("unknown", nil),
 			expect: func(t *testing.T, err error) {
 				assert.EqualError(t, err, "foo: unknown")
 			},
