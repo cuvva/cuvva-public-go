@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -18,7 +19,8 @@ type PDShift struct {
 func (a *App) ListPagerDutyShifts(scheduleID string, start, end time.Time) ([]*PDShift, interface{}, error) {
 	var shifts []*PDShift
 
-	res, err := a.pagerduty.ListOnCalls(pagerduty.ListOnCallOptions{
+	// @TODO context should be injected from the cobra entry point
+	res, err := a.pagerduty.ListOnCallsWithContext(context.Background(), pagerduty.ListOnCallOptions{
 		Includes:    []string{"users"},
 		ScheduleIDs: []string{scheduleID},
 		Since:       start.Format(time.RFC3339),
