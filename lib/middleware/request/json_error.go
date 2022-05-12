@@ -14,8 +14,8 @@ func JSONError(w http.ResponseWriter, err error) {
 
 	e := json.NewEncoder(w)
 
-	if err, ok := err.(cher.E); ok {
-		e.Encode(err)
+	if chErr, ok := err.(cher.E); ok {
+		e.Encode(chErr)
 	} else {
 		e.Encode(cher.New(cher.Unauthorized, nil, cher.New(cher.Unknown, cher.M{"error": err})))
 	}
