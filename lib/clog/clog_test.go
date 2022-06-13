@@ -3,9 +3,11 @@ package clog
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 
+	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -102,4 +104,65 @@ func TestContextLogger(t *testing.T) {
 		assert.Equal(t, "no clog exists in the context", err.Error())
 	})
 
+}
+
+func TestDetermineLevel(t *testing.T) {
+	type testCase struct {
+		name             string
+		err              error
+		timeoutsAsErrors bool
+		expected         logrus.Level
+	}
+
+	tests := []testCase{
+		{
+			name:             "bad request",
+			err:              cher.New("bad_request", nil),
+			timeoutsAsErrors: false,
+			expected:         logrus.WarnLevel,
+		},
+		{
+			name:             "context cancelled",
+			err:              cher.New(cher.ContextCanceled, nil),
+			timeoutsAsErrors: false,
+			expected:         logrus.InfoLevel,
+		},
+		{
+			name:             "context cancelled with timeouts as errors",
+			err:              cher.New(cher.ContextCanceled, nil),
+			timeoutsAsErrors: true,
+			expected:         logrus.ErrorLevel,
+		},
+		{
+			name:             "unknown",
+			err:              cher.New(cher.Unknown, nil),
+			timeoutsAsErrors: false,
+			expected:         logrus.ErrorLevel,
+		},
+		{
+			name:             "postgres context cancelled",
+			err:              fmt.Errorf("pq: canceling statement due to user request"),
+			timeoutsAsErrors: false,
+			expected:         logrus.InfoLevel,
+		},
+		{
+			name:             "postgres context cancelled with timeouts as errors",
+			err:              fmt.Errorf("pq: canceling statement due to user request"),
+			timeoutsAsErrors: true,
+			expected:         logrus.ErrorLevel,
+		},
+		{
+			name:             "other error",
+			err:              fmt.Errorf("something something darkside"),
+			timeoutsAsErrors: false,
+			expected:         logrus.ErrorLevel,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := DetermineLevel(tc.err, tc.timeoutsAsErrors)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
 }

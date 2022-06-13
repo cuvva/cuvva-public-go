@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/cuvva/cuvva-public-go/lib/servicecontext"
@@ -248,6 +249,13 @@ func DetermineLevel(err error, timeoutsAsErrors bool) logrus.Level {
 		default:
 			return logrus.WarnLevel
 		}
+	}
+
+	if strings.Contains(err.Error(), "canceling statement due to user request") {
+		if timeoutsAsErrors {
+			return logrus.ErrorLevel
+		}
+		return logrus.InfoLevel
 	}
 
 	// non-cher errors are "unhandled" so warrant an error
