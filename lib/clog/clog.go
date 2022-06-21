@@ -197,10 +197,12 @@ func SetError(ctx context.Context, err error) error {
 
 	ctxLogger.SetError(err)
 
-	if cherErr, ok := err.(cher.E); ok {
+	cherErr := cher.E{}
+	if errors.As(err, &cherErr) {
 		if len(cherErr.Reasons) > 0 {
 			ctxLogger.SetField("error_reasons", cherErr.Reasons)
 		}
+
 		if cherErr.Meta != nil {
 			ctxLogger.SetField("error_meta", cherErr.Meta)
 		}
