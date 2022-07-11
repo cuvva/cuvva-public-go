@@ -3,6 +3,7 @@ package crpc
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -85,6 +86,10 @@ func Validate(ls *gojsonschema.Schema) MiddlewareFunc {
 
 			result, err := ls.Validate(ld)
 			if err != nil {
+				if errors.Is(err, io.EOF) {
+					return cher.New(cher.BadRequest, nil, cher.New("body content isn't JSON", nil))
+				}
+
 				return fmt.Errorf("crpc schema validation failed: %w", err)
 			}
 

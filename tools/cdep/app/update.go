@@ -34,7 +34,7 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 
 	latestHash, err := git.GetLatestCommitHash(ctx, req.Branch)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get commit hash: %w", err)
 	}
 
 	repoPath, err := paths.GetConfigRepo()
