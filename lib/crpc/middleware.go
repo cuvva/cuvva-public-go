@@ -87,7 +87,7 @@ func Validate(ls *gojsonschema.Schema) MiddlewareFunc {
 			result, err := ls.Validate(ld)
 			if err != nil {
 				if errors.Is(err, io.EOF) {
-					return cher.New(cher.BadRequest, nil, cher.New("body content isn't JSON", nil))
+					return cher.New(cher.BadRequest, cher.M{"message": "invalid JSON"})
 				}
 
 				return fmt.Errorf("crpc schema validation failed: %w", err)
