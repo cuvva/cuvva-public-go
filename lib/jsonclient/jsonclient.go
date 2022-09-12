@@ -76,12 +76,13 @@ func (c *Client) Do(ctx context.Context, method, path string, params url.Values,
 
 	ctx, requestID := request.GetOrSetRequestID(ctx)
 
+	fullPath := pathlib.Join(c.Prefix, path)
 	req := &http.Request{
 		Method: method,
 		URL: &url.URL{
 			Scheme: c.Scheme,
 			Host:   c.Host,
-			Path:   pathlib.Join(c.Prefix, path),
+			Path:   fullPath,
 		},
 		Header: http.Header{
 			"Accept":     []string{"application/json"},
@@ -104,7 +105,7 @@ func (c *Client) Do(ctx context.Context, method, path string, params url.Values,
 	if err != nil {
 		if netErr, ok := err.(net.Error); ok {
 			if netErr.Timeout() {
-				return cher.New(cher.RequestTimeout, cher.M{"method": method, "path": path, "host": c.Host, "scheme": c.Scheme})
+				return cher.New(cher.RequestTimeout, cher.M{"method": method, "path": fullPath, "host": c.Host, "scheme": c.Scheme, "timeout_error": netErr})
 			}
 
 			return &ClientTransportError{method, path, "request failed", netErr}
