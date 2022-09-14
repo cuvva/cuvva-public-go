@@ -10,6 +10,7 @@ import (
 // GenerateRota generates a rota based on a schedule and month
 func (a *App) GenerateRota(scheduleID string, year int, month time.Month) (oncallcalc.Rota, interface{}, error) {
 	loc, err := time.LoadLocation("Europe/London")
+
 	if err != nil {
 		panic(err)
 	}
