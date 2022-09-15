@@ -57,6 +57,7 @@ var GenerateReportCmd = &cobra.Command{
 			return err
 		}
 
+		cmd.Printf("\n")
 		cmd.Println(app.StringifyRota(rota))
 
 		return nil
