@@ -206,7 +206,6 @@ func (cfg *Server) Listen() (net.Listener, error) {
 		return nil, err
 	}
 
-	logrus.WithField("addr", cfg.Addr).Info("listening")
 	return l, nil
 }
 
