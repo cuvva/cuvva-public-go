@@ -2,9 +2,10 @@ package jsonschema
 
 import (
 	"fmt"
-	"github.com/xeipuuv/gojsonschema"
 	"io"
 	"io/fs"
+
+	"github.com/xeipuuv/gojsonschema"
 )
 
 type FS struct {

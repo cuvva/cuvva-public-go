@@ -3,7 +3,6 @@ package app
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
@@ -52,7 +51,7 @@ func (a App) AddToConfig(path, branchName, commitHash string) (bool, error) {
 	blob = attemptInsert(blob, "commit", commitHash)
 	blob = attemptInsert(blob, "branch", branchName)
 
-	return !bytes.Equal(original, blob), ioutil.WriteFile(path, blob, os.ModePerm)
+	return !bytes.Equal(original, blob), os.WriteFile(path, blob, os.ModePerm)
 }
 
 // AttemptInsert attempts to insert a key into the struct if it doesn't exist
