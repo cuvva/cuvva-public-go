@@ -18,7 +18,7 @@ var commitRegAdd = regexp.MustCompile(`"commit"\s*:\s*"[a-f\d]{40}"`)
 var branchRegAdd = regexp.MustCompile(`"branch"\s*:\s*"([a-zA-Z\d_-]+)"`)
 
 func (a App) AddToConfig(path, branchName, commitHash string) (bool, error) {
-	blob, err := ioutil.ReadFile(path)
+	blob, err := os.ReadFile(path)
 	if err != nil {
 		if v, ok := err.(*os.PathError); ok {
 			if v.Op != "open" {

@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -192,7 +191,7 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 }
 
 func checkECRImage(filePath, latestHash, branch string) error {
-	fileContents, err := ioutil.ReadFile(filePath)
+	fileContents, err := os.ReadFile(filePath)
 	if err != nil {
 		return err
 	}

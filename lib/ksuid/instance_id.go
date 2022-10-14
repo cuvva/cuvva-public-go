@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	math_rand "math/rand"
 	"net"
 	"os"
@@ -88,7 +87,7 @@ func NewDockerID() (InstanceID, error) {
 }
 
 func getDockerID() ([]byte, error) {
-	src, err := ioutil.ReadFile("/proc/1/cpuset")
+	src, err := os.ReadFile("/proc/1/cpuset")
 	src = bytes.TrimSpace(src)
 	if os.IsNotExist(err) || len(src) < 64 || !bytes.HasPrefix(src, []byte("/docker")) {
 		return nil, fmt.Errorf("not a docker container")

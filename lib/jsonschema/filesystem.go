@@ -2,10 +2,9 @@ package jsonschema
 
 import (
 	"fmt"
-	"io/fs"
-	"io/ioutil"
-
 	"github.com/xeipuuv/gojsonschema"
+	"io"
+	"io/fs"
 )
 
 type FS struct {
@@ -29,7 +28,7 @@ func (f *FS) Load(filepath string) gojsonschema.JSONLoader {
 		panic(fmt.Errorf("open json schema file: %w", err))
 	}
 
-	b, err := ioutil.ReadAll(file)
+	b, err := io.ReadAll(file)
 	if err != nil {
 		panic(fmt.Errorf("read json schema file: %s", err))
 	}

@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	urllib "net/url"
 	"strings"
@@ -99,7 +99,7 @@ func (c *Client) Login(ctx context.Context, application string) (string, error) 
 
 func handleResponse(resp *http.Response, result interface{}) error {
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return fmt.Errorf("request failed (%d) - could not read body: %w", resp.StatusCode, err)
 		}
@@ -107,7 +107,7 @@ func handleResponse(resp *http.Response, result interface{}) error {
 		return fmt.Errorf("request failed (%d) - error body:\n\n%s", resp.StatusCode, string(body))
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("unexpected response (%d) - could not read body: %w", resp.StatusCode, err)
 	}
