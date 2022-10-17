@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -115,7 +115,7 @@ func (a App) UpdateWeb(ctx context.Context, req *parsers.Params, overruleChecks 
 		return err
 	}
 
-	deployFileBytes, err := ioutil.ReadAll(deployFileResp.Body)
+	deployFileBytes, err := io.ReadAll(deployFileResp.Body)
 	if err != nil {
 		return err
 	}

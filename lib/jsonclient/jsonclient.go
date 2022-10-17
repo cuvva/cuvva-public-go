@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -128,7 +127,7 @@ func (c *Client) setRequestBody(req *http.Request, src interface{}) error {
 			return err
 		}
 
-		req.Body = ioutil.NopCloser(&buf)
+		req.Body = io.NopCloser(&buf)
 		req.ContentLength = int64(buf.Len())
 
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
@@ -157,7 +156,7 @@ func (c *Client) handleResponse(res *http.Response, method, path string, dst int
 		return nil
 	}
 
-	resBody, err := ioutil.ReadAll(res.Body)
+	resBody, err := io.ReadAll(res.Body)
 	if err != nil {
 		return &ClientTransportError{method, path, "could not read response body stream", err}
 	}

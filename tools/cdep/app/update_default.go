@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"path"
 	"strings"
@@ -101,7 +101,7 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 
 	for env, paths := range loadedPaths {
 		for _, p := range paths {
-			files, err := ioutil.ReadDir(p)
+			files, err := os.ReadDir(p)
 			if err != nil {
 				return err
 			}

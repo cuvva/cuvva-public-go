@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
@@ -72,7 +71,7 @@ func handleCLogError(err error) {
 func Validate(ls *gojsonschema.Schema) MiddlewareFunc {
 	return func(next HandlerFunc) HandlerFunc {
 		return func(res http.ResponseWriter, req *Request) error {
-			body, err := ioutil.ReadAll(req.Body)
+			body, err := io.ReadAll(req.Body)
 			if err != nil {
 				if netErr, ok := err.(net.Error); ok {
 					clog.Get(req.Context()).WithError(netErr).Warn("network error reading request body")
@@ -98,7 +97,7 @@ func Validate(ls *gojsonschema.Schema) MiddlewareFunc {
 				return err
 			}
 
-			req.Body = ioutil.NopCloser(bytes.NewReader(body))
+			req.Body = io.NopCloser(bytes.NewReader(body))
 			return next(res, req)
 		}
 	}

@@ -3,7 +3,6 @@ package app
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
@@ -18,7 +17,7 @@ var commitRegAdd = regexp.MustCompile(`"commit"\s*:\s*"[a-f\d]{40}"`)
 var branchRegAdd = regexp.MustCompile(`"branch"\s*:\s*"([a-zA-Z\d_-]+)"`)
 
 func (a App) AddToConfig(path, branchName, commitHash string) (bool, error) {
-	blob, err := ioutil.ReadFile(path)
+	blob, err := os.ReadFile(path)
 	if err != nil {
 		if v, ok := err.(*os.PathError); ok {
 			if v.Op != "open" {
@@ -52,7 +51,7 @@ func (a App) AddToConfig(path, branchName, commitHash string) (bool, error) {
 	blob = attemptInsert(blob, "commit", commitHash)
 	blob = attemptInsert(blob, "branch", branchName)
 
-	return !bytes.Equal(original, blob), ioutil.WriteFile(path, blob, os.ModePerm)
+	return !bytes.Equal(original, blob), os.WriteFile(path, blob, os.ModePerm)
 }
 
 // AttemptInsert attempts to insert a key into the struct if it doesn't exist

@@ -3,7 +3,6 @@ package csvscanner
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -94,7 +93,7 @@ func TestHasCloseMethod(t *testing.T) {
 func TestNewURLScanner(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/csv;charset=utf-8")
-		file, err := ioutil.ReadFile("testdata/gooddata.csv")
+		file, err := os.ReadFile("testdata/gooddata.csv")
 		if err != nil {
 			panic(err)
 		}
@@ -147,7 +146,7 @@ func TestNewURLScannerGzip(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/csv;charset=utf-8")
 		w.Header().Set("Content-Encoding", "gzip")
-		file, err := ioutil.ReadFile("testdata/gooddata.csv.gz")
+		file, err := os.ReadFile("testdata/gooddata.csv.gz")
 		if err != nil {
 			panic(err)
 		}
@@ -230,7 +229,7 @@ func TestScannerHandlesEmptyBody(t *testing.T) {
 func TestScanCallExistsEarlyWithBadCSVData(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/csv;charset=utf-8")
-		file, err := ioutil.ReadFile("testdata/baddata.csv")
+		file, err := os.ReadFile("testdata/baddata.csv")
 		if err != nil {
 			panic(err)
 		}
@@ -271,7 +270,7 @@ func TestScanCallExistsEarlyWithBadCSVData(t *testing.T) {
 func TestScannerErrorsThenNotCSV(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/csv;charset=utf-8")
-		file, err := ioutil.ReadFile("testdata/not_csv.csv")
+		file, err := os.ReadFile("testdata/not_csv.csv")
 		if err != nil {
 			panic(err)
 		}
@@ -300,7 +299,7 @@ func TestScannerErrorsThenNotCSV(t *testing.T) {
 func TestScannerHandlesEmptyCells(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/csv;charset=utf-8")
-		file, err := ioutil.ReadFile("testdata/emptycells.csv")
+		file, err := os.ReadFile("testdata/emptycells.csv")
 		if err != nil {
 			panic(err)
 		}
