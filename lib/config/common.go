@@ -63,13 +63,22 @@ func (r Redis) Connect() (*redis.Client, error) {
 
 // MongoDB configures a connection to a Mongo database.
 type MongoDB struct {
-	URI            string        `json:"uri"`
-	ConnectTimeout time.Duration `json:"connect_timeout"`
+	URI             string         `json:"uri"`
+	ConnectTimeout  time.Duration  `json:"connect_timeout"`
+	MaxConnIdleTime *time.Duration `json:"max_conn_idle_time"`
+	MaxConnecting   *uint64        `json:"max_connecting"`
+	MaxPoolSize     *uint64        `json:"max_pool_size"`
+	MinPoolSize     *uint64        `json:"min_pool_size"`
 }
 
 // Options returns the MongoDB client options and database name.
 func (m MongoDB) Options() (opts *options.ClientOptions, dbName string, err error) {
 	opts = options.Client().ApplyURI(m.URI)
+	opts.MaxConnIdleTime = m.MaxConnIdleTime
+	opts.MaxConnecting = m.MaxConnecting
+	opts.MaxPoolSize = m.MaxPoolSize
+	opts.MinPoolSize = m.MinPoolSize
+
 	err = opts.Validate()
 	if err != nil {
 		return
