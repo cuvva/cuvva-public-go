@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/Masterminds/squirrel v1.5.2
 	github.com/PagerDuty/go-pagerduty v1.5.1
-	github.com/aws/aws-sdk-go v1.42.44
+	github.com/aws/aws-sdk-go v1.44.145
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/go-chi/chi/v5 v5.0.7
 	github.com/go-git/go-billy/v5 v5.3.1
@@ -23,8 +23,8 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/xeipuuv/gojsonschema v1.2.0
 	go.mongodb.org/mongo-driver v1.9.1
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/text v0.3.7
+	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
+	golang.org/x/text v0.4.0
 	gopkg.in/h2non/gock.v1 v1.1.2
 	gopkg.in/intercom/intercom-go.v2 v2.0.0-20200217143803-6ffc0627261a
 )
@@ -79,9 +79,9 @@ require (
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
-	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f // indirect
-	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9 // indirect
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
+	golang.org/x/net v0.1.0 // indirect
+	golang.org/x/sys v0.1.0 // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
