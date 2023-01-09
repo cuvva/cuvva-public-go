@@ -43,7 +43,7 @@ func (a App) AddToConfig(path, branchName, commitHash string) (bool, error) {
 	original := make([]byte, len(blob))
 	copy(original, blob)
 
-	attemptWarnIfOverride(blob, branchRegAdd, branchName)
+	attemptWarnIfOverride(blob, branchRegAdd, branchName, path)
 
 	blob = attemptUpdate(blob, commitRegAdd, "commit", commitHash)
 	blob = attemptUpdate(blob, branchRegAdd, "branch", branchName)
@@ -79,7 +79,7 @@ func attemptUpdate(blob []byte, reg *regexp.Regexp, key, value string) []byte {
 	return blob
 }
 
-func attemptWarnIfOverride(blob []byte, reg *regexp.Regexp, newBranch string) {
+func attemptWarnIfOverride(blob []byte, reg *regexp.Regexp, newBranch, path string) {
 	matches := reg.FindSubmatch(blob)
 
 	if len(matches) <= 1 {
@@ -89,6 +89,6 @@ func attemptWarnIfOverride(blob []byte, reg *regexp.Regexp, newBranch string) {
 	branchName := string(matches[1])
 
 	if branchName != "master" && branchName != newBranch {
-		log.Warnf("Custom branch is going to be overriden, old: %s, new: %s", branchName, newBranch)
+		log.Warnf("Custom branch is going to be overriden, old: %s, new: %s, path: %s", branchName, newBranch, path)
 	}
 }
