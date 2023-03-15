@@ -15,7 +15,7 @@ type testErr struct {
 func (e testErr) Error() string { return e.error }
 func (e testErr) Timeout() bool { return e.timeout }
 
-func TestThirdPartyTripperware_RoundTrip(t1 *testing.T) {
+func TestCoerceThirdPartyTimeout(t1 *testing.T) {
 	tests := []struct {
 		name   string
 		err    error
