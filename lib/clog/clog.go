@@ -260,6 +260,12 @@ func DetermineLevel(err error, timeoutsAsErrors bool) logrus.Level {
 		return logrus.InfoLevel
 	}
 
+	// pgx pool request context cancelled while connecting
+	if strings.Contains(err.Error(), "operation was canceled") &&
+		strings.Contains(err.Error(), "failed to connect to") {
+		return logrus.InfoLevel
+	}
+
 	// non-cher errors are "unhandled" so warrant an error
 	return logrus.ErrorLevel
 }
