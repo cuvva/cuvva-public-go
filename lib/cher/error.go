@@ -25,6 +25,7 @@ const (
 	EOF               = "eof"
 	UnexpectedEOF     = "unexpected_eof"
 	RequestTimeout    = "request_timeout"
+	ThirdPartyTimeout = "third_party_timeout"
 
 	CoercionError = "unable_to_coerce_error"
 )

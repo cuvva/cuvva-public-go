@@ -66,12 +66,13 @@ func (w *Worker) Do(fns ...WorkerFunc) {
 			return
 		default:
 			atomic.AddInt64(&w.activeOperations, 1)
+			f := fn
 			go func() {
 				select {
 				case <-w.ctx.Done():
 					return
 				default:
-					w.pendingTasks <- fn
+					w.pendingTasks <- f
 				}
 			}()
 		}
