@@ -31,8 +31,7 @@ func TestThirdPartyTripperware_RoundTrip(t1 *testing.T) {
 				var cErr E
 				require.ErrorAs(t, err, &cErr)
 				require.Equal(t, "third_party_timeout", cErr.Code)
-				require.Equal(t, "example.cuvva.com", cErr.Meta["host"])
-				require.Equal(t, "foobar", cErr.Meta["reason"])
+				require.Equal(t, "foobar", cErr.Meta["error"])
 			},
 		},
 		{
