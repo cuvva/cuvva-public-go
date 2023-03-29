@@ -3,6 +3,7 @@ package postcodesio
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -30,6 +31,7 @@ const DefaultBaseURL = "https://api.postcodes.io"
 // Service interface contains all available, exposed methods of postcodes.io
 type Service interface {
 	ReverseGeocode(ctx context.Context, latitude, longitude float64) (*Postcode, error)
+	PostcodeToGeocode(ctx context.Context, postcode string) (*Postcode, error)
 }
 
 // Client is the base struct for the methods to be attached to
@@ -114,6 +116,41 @@ func (fc *FailoverClient) ReverseGeocode(ctx context.Context, latitude, longitud
 		"latitude":  latitude,
 		"longitude": longitude,
 	}, errors...)
+}
+
+// PostcodeToGeocode returns a latitude and a longitude for a postcode
+func (c *Client) PostcodeToGeocode(ctx context.Context, postcode string) (*Postcode, error) {
+	var res struct {
+		Status int      `json:"status"`
+		Result Postcode `json:"result"`
+	}
+
+	err := c.Do(ctx, "GET", fmt.Sprintf("/postcodes/%s", postcode), nil, nil, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	return &res.Result, nil
+}
+
+// PostcodeToGeocode returns a latitude and a longitude for a postcode
+func (fc *FailoverClient) PostcodeToGeocode(ctx context.Context, postcode string) (*Postcode, error) {
+	var errors []cher.E
+
+	for _, cli := range fc.clients {
+		pc, err := cli.PostcodeToGeocode(ctx, postcode)
+		if err == nil {
+			return pc, nil
+		}
+
+		cErr := cher.New("postcodes_request_failed", cher.M{
+			"message": err.Error(),
+		})
+
+		errors = append(errors, cErr)
+	}
+
+	return nil, cher.New("postcode_error", cher.M{"postcode": postcode}, errors...)
 }
 
 // interface guards
