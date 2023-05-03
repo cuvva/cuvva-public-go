@@ -14,6 +14,7 @@ var Systems = map[string]map[string]struct{}{
 		"coconut":   {},
 		"dwight":    {},
 		"eggplant":  {},
+		"pretzel":   {},
 		"ephemeral": {},
 		"test":      {},
 		"all":       {},
