@@ -65,57 +65,7 @@ func NewClient(baseURL string, c *http.Client) *Client {
 
 // Do executes an HTTP request against the configured server.
 func (c *Client) Do(ctx context.Context, method, path string, params url.Values, src, dst interface{}) error {
-	if c.Client == nil {
-		c.Client = http.DefaultClient
-	}
-
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	ctx, requestID := request.GetOrSetRequestID(ctx)
-
-	fullPath := pathlib.Join(c.Prefix, path)
-	req := &http.Request{
-		Method: method,
-		URL: &url.URL{
-			Scheme: c.Scheme,
-			Host:   c.Host,
-			Path:   fullPath,
-		},
-		Header: http.Header{
-			"Accept":     []string{"application/json"},
-			"User-Agent": []string{c.UserAgent},
-			"Request-Id": []string{requestID},
-		},
-		Host: c.Host,
-	}
-
-	if params != nil {
-		req.URL.RawQuery = params.Encode()
-	}
-
-	err := c.setRequestBody(req, src)
-	if err != nil {
-		return &ClientRequestError{"could not marshal", err}
-	}
-
-	res, err := c.Client.Do(req.WithContext(ctx))
-	if err != nil {
-		if netErr, ok := err.(net.Error); ok {
-			if netErr.Timeout() {
-				return cher.New(cher.RequestTimeout, cher.M{"method": method, "path": fullPath, "host": c.Host, "scheme": c.Scheme, "timeout_error": netErr})
-			}
-
-			return &ClientTransportError{method, path, "request failed", netErr}
-		}
-
-		return &ClientTransportError{method, path, "unknown error", err}
-	}
-
-	defer res.Body.Close()
-
-	return c.handleResponse(res, method, path, dst)
+	return c.DoWithHeaders(ctx, method, path, nil, params, src, dst)
 }
 
 // DoWithHeaders executes an HTTP request against the configured server with custom headers.
