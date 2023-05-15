@@ -65,6 +65,11 @@ func NewClient(baseURL string, c *http.Client) *Client {
 
 // Do executes an HTTP request against the configured server.
 func (c *Client) Do(ctx context.Context, method, path string, params url.Values, src, dst interface{}) error {
+	return c.DoWithHeaders(ctx, method, path, nil, params, src, dst)
+}
+
+// DoWithHeaders executes an HTTP request against the configured server with custom headers.
+func (c *Client) DoWithHeaders(ctx context.Context, method, path string, headers http.Header, params url.Values, src, dst interface{}) error {
 	if c.Client == nil {
 		c.Client = http.DefaultClient
 	}
@@ -93,6 +98,10 @@ func (c *Client) Do(ctx context.Context, method, path string, params url.Values,
 
 	if params != nil {
 		req.URL.RawQuery = params.Encode()
+	}
+
+	for key, value := range headers {
+		req.Header[key] = value
 	}
 
 	err := c.setRequestBody(req, src)
