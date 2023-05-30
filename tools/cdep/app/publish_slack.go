@@ -6,10 +6,9 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/cuvva/cuvva-public-go/tools/cdep/parsers"
-
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/sns"
+	"github.com/cuvva/cuvva-public-go/tools/cdep/parsers"
 )
 
 func (a App) PublishToSlack(ctx context.Context, req *parsers.Params, commitMessage string, updatedFiles []string, repoPath string) error {
