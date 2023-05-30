@@ -1,5 +1,15 @@
 package slicecontains
 
+func Int(slice []int, val int) bool {
+	for _, v := range slice {
+		if v == val {
+			return true
+		}
+	}
+
+	return false
+}
+
 func String(slice []string, val string) bool {
 	for _, v := range slice {
 		if v == val {

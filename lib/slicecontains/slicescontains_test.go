@@ -39,3 +39,12 @@ func TestSameStringsSubset(t *testing.T) {
 		t.Error("slices should not be equal")
 	}
 }
+
+func TestSameIntMatch(t *testing.T) {
+	a := []int{1, 2}
+	b := 2
+
+	if !slicecontains.Int(a, b) {
+		t.Error("slices should not be equal")
+	}
+}
