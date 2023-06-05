@@ -6,13 +6,13 @@ It does this by splitting all days within the month to 12 hour shifts, which it 
 
 It additionally calculates payouts as needed.
 
-## Requisites 
+## Requirements 
 1. An accesskey from pagerduty
-    1. Open [PagerDuty](https://cuvva.pagerduty.com/)
+    1. Login to [PagerDuty](https://pagerduty.com/)
     2. Click `User Profile`
     3. Select `User Settings`
     4. Click `Create API User Token`
-    5. Keep this token to be used in the next step. Optionally, add it to your 1password vault.
+    5. Keep this token to be used in the next step.
 2. GoLang installed in your machine
 
 ## Installation
