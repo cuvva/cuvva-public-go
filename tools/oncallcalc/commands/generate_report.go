@@ -11,12 +11,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var ScheduleID string
+var ScheduleIDs []string
 var TimeIn string
 var Verbose bool
 
 func init() {
-	GenerateReportCmd.Flags().StringVarP(&ScheduleID, "schedule_id", "s", "PKICNIO", "Schedule ID from PagerDuty")
+	GenerateReportCmd.Flags().StringArrayVarP(&ScheduleIDs, "schedule_id", "s", []string{"PKICNIO", "PKW2AKK"}, "Schedule IDs from PagerDuty")
 	GenerateReportCmd.Flags().StringVarP(&TimeIn, "time", "t", "Jan 2020", "Which month and year should we look at?")
 	GenerateReportCmd.Flags().BoolVarP(&Verbose, "verbose", "v", false, "Verbose mode?")
 }
@@ -49,7 +49,7 @@ var GenerateReportCmd = &cobra.Command{
 			return err
 		}
 
-		rota, debug, err := app.GenerateRota(ScheduleID, timeIn.Year(), timeIn.Month())
+		rota, debug, err := app.GenerateRota(ScheduleIDs, timeIn.Year(), timeIn.Month())
 		if err != nil {
 			if Verbose {
 				cmd.Printf("%+v\n", debug)
