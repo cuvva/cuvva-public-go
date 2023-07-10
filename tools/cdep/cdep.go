@@ -6,7 +6,7 @@ const Version = "0.6"
 const DefaultBranch = "master"
 
 var ErrorCodeMapping = map[string]string{
-	"config_not_on_mater":       "Your config repo is not on master, please swap your HEAD back to master.",
+	"config_not_on_master":      "Your config repo is not on master, please swap your HEAD back to master.",
 	"frozen_without_commit":     "We found a resource where the config is locked, but no commit is specified.",
 	"frozen":                    "The resource you're trying to update is currently frozen.",
 	"nothing_changed":           "Running this tool has resulted in no change.",
