@@ -17,7 +17,7 @@ type PDShift struct {
 }
 
 // ListPagerDutyShifts returns a slice of shifts pagerduty is tracking for a schedule
-func (a *App) ListPagerDutyShifts(scheduleID string, start, end time.Time) ([]*PDShift, interface{}, error) {
+func (a *App) ListPagerDutyShifts(scheduleIDs []string, start, end time.Time) ([]*PDShift, interface{}, error) {
 	var shifts []*PDShift
 
 	fmt.Println("Requesting on call dates for ", start.Format(time.RFC3339), " until ", end.Format(time.RFC3339))
@@ -25,7 +25,7 @@ func (a *App) ListPagerDutyShifts(scheduleID string, start, end time.Time) ([]*P
 	// @TODO context should be injected from the cobra entry point
 	res, err := a.pagerduty.ListOnCallsWithContext(context.Background(), pagerduty.ListOnCallOptions{
 		Includes:    []string{"users"},
-		ScheduleIDs: []string{scheduleID},
+		ScheduleIDs: scheduleIDs,
 		Since:       start.Format(time.RFC3339),
 		Until:       end.Format(time.RFC3339),
 		Limit:       100, // TODO implement pagination if we require more values

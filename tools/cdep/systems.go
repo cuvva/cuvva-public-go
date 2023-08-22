@@ -12,8 +12,6 @@ var Systems = map[string]map[string]struct{}{
 		"avocado":   {},
 		"basil":     {},
 		"coconut":   {},
-		"dwight":    {},
-		"eggplant":  {},
 		"pretzel":   {},
 		"ephemeral": {},
 		"test":      {},

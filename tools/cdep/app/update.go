@@ -70,7 +70,7 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 
 	defaultRef := fmt.Sprintf("refs/heads/%s", cdep.DefaultBranch)
 	if ref.Name().String() != defaultRef {
-		return cher.New("config_not_on_mater", nil)
+		return cher.New("config_not_on_master", nil)
 	}
 
 	log.Info("pulling config repo from remote")
