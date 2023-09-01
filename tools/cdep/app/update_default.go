@@ -114,7 +114,7 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 				fullPath := path.Join(p, file.Name())
 				var changed bool
 
-				if strings.Contains(fullPath, "_base.json") {
+				if strings.HasSuffix(fullPath, "_base.json") || strings.HasSuffix(fullPath, ".yaml") {
 					changed, err = a.AddToConfig(fullPath, req.Branch, latestHash)
 					if err != nil {
 						return err

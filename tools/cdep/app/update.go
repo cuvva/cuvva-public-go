@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/cuvva/cuvva-public-go/lib/cher"
@@ -22,7 +23,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var imageName = regexp.MustCompile(`"docker_image_name"\s*:\s*"([a-zA-Z\d_-]+)"`)
+var imageName = regexp.MustCompile(`"?docker_image_name"?\s*:\s*"?([a-zA-Z\d_-]+)"?`)
 
 func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []string) error {
 	if req.Environment == "prod" && req.Branch != cdep.DefaultBranch {
@@ -109,12 +110,17 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 				p := paths.GetPathForService(repoPath, req.System, env, service)
 
 				if _, err := os.Stat(p); err != nil {
-					log.Warn(err)
+					p = paths.GetYamlPathForService(repoPath, req.System, env, service)
+					_, err2 := os.Stat(p)
+					if err2 != nil {
+						log.Warn(err)
+						log.Warn(err2)
+					}
 				}
 
 				err := checkECRImage(p, latestHash, req.Branch)
 				if err != nil {
-					e := errors.Wrap(err, "ecr:")
+					e := errors.Wrap(err, "ecr")
 					log.Warn(e)
 				}
 
@@ -124,7 +130,7 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 				}
 
 				if changed {
-					shorthandPath := path.Join(req.System, env, "service", service+".json")
+					shorthandPath := strings.TrimLeft(p, repoPath+"/")
 					updatedFiles = append(updatedFiles, shorthandPath)
 				}
 			}
@@ -234,7 +240,7 @@ func findBuildInECR(dockerImageName, latestHash, branch string) error {
 		},
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("batch get image: %w", err)
 	}
 
 	if len(images.Images) != 1 {
