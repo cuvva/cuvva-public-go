@@ -25,13 +25,13 @@ func (a App) AddToConfig(path, branchName, commitHash string) (bool, error) {
 	if err != nil {
 		if v, ok := err.(*os.PathError); ok {
 			if v.Op != "open" {
-				return false, err
+				return false, fmt.Errorf("read file path error: %w", err)
 			}
 
 			return false, nil
 		}
 
-		return false, err
+		return false, fmt.Errorf("read file: %w", err)
 	}
 
 	if commitFreeze.Match(blob) && !commitRegAdd.Match(blob) {
