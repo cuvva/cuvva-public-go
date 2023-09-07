@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/cuvva/cuvva-public-go/lib/cher"
@@ -39,7 +38,7 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 
 	repoPath, err := paths.GetConfigRepo()
 	if err != nil {
-		return err
+		return fmt.Errorf("path get config repo: %w", err)
 	}
 
 	log.Info("fetching config repo")
@@ -60,12 +59,12 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 
 	_, err = git.CheckRepo(configRepo)
 	if err != nil {
-		return err
+		return fmt.Errorf("config git check repo: %w", err)
 	}
 
 	ref, err := configRepo.Head()
 	if err != nil {
-		return err
+		return fmt.Errorf("config git head: %w", err)
 	}
 
 	defaultRef := fmt.Sprintf("refs/heads/%s", cdep.DefaultBranch)
@@ -82,13 +81,13 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 
 	wt, err := configRepo.Worktree()
 	if err != nil {
-		return err
+		return fmt.Errorf("config git work tree: %w", err)
 	}
 
 	err = git.CheckWorkingCopy(wt)
 	if err != nil {
 		if !slicecontains.String(overruleChecks, "working_copy_dirty") {
-			return err
+			return fmt.Errorf("config git check working copy: %w", err)
 		}
 
 		log.Warn("working_copy_dirty overruled")
@@ -100,7 +99,7 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 
 	envs, err := a.LoadEnvs(repoPath, req.System, req.Environment)
 	if err != nil {
-		return err
+		return fmt.Errorf("load envs: %w", err)
 	}
 
 	for env := range envs {
@@ -126,11 +125,12 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 
 				changed, err := a.AddToConfig(p, req.Branch, latestHash)
 				if err != nil {
-					return err
+					return fmt.Errorf("add to config: %w", err)
 				}
 
 				if changed {
-					shorthandPath := strings.TrimLeft(p, repoPath+"/")
+					filename := path.Base(p)
+					shorthandPath := path.Join(req.System, env, "service", filename)
 					updatedFiles = append(updatedFiles, shorthandPath)
 				}
 			}
@@ -164,7 +164,7 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 	commitMessage := fmt.Sprintf("cdep: %s", req.String("update"))
 
 	if err := a.PublishToSlack(ctx, req, commitMessage, updatedFiles, repoPath); err != nil {
-		return err
+		return fmt.Errorf("publish to slack: %w", err)
 	}
 
 	if a.DryRun {
@@ -177,20 +177,20 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 		log.Infof("adding %s to commit", p)
 		_, err := wt.Add(p)
 		if err != nil {
-			return err
+			return fmt.Errorf("config git add: %w", err)
 		}
 	}
 
 	_, err = wt.Commit(commitMessage, &gogit.CommitOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("config git commit: %w", err)
 	}
 
 	log.Info("pushing commit to config repo")
 
 	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "push", "origin", cdep.DefaultBranch).Output(); err != nil {
 		fmt.Println(string(out))
-		return err
+		return fmt.Errorf("config git push: %w", err)
 	}
 
 	return nil
