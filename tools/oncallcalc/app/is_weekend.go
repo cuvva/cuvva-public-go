@@ -4,17 +4,10 @@ import (
 	"time"
 )
 
-// isWeekend determines if a date matches Cuvva's defintion of a weekend
+// isWeekend determines if a times day is a Saturday or Sunday
 func isWeekend(t time.Time) bool {
-	if t.Weekday() == time.Friday && t.Hour() >= 12 {
-		return true
-	}
 
 	if t.Weekday() == time.Saturday || t.Weekday() == time.Sunday {
-		return true
-	}
-
-	if t.Weekday() == time.Monday && t.Hour() < 12 {
 		return true
 	}
 
