@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/PagerDuty/go-pagerduty"
+	log "github.com/sirupsen/logrus"
 )
 
 // PDShift is a PagerDuty representation of an on-call shift
@@ -49,9 +50,11 @@ func (a *App) ListPagerDutyShifts(scheduleIDs []string, start, end time.Time) ([
 
 		// if you weren't on the shift for at least 1 hour, we're skipping you
 		if end.Sub(start).Seconds() < (60 * time.Minute).Seconds() {
-			fmt.Println("Skipping short shift for [ ", pgShift.User.ID, " ] as duration was ", end.Sub(start).Minutes(), " minutes on ", pgShift.Start)
+			fmt.Println("Skipping short shift for [ ", pgShift.User.Email, " ] as duration was ", end.Sub(start).Minutes(), " minutes on ", pgShift.Start)
 			continue
 		}
+
+		log.Infof("Email %+v\nStart %+v End %+v\n", pgShift.User.Email, start, end)
 
 		shifts = append(shifts, &PDShift{
 			Email: pgShift.User.Email,

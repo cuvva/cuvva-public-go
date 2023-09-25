@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func (a *App) GetBankHolidays(ctx context.Context, year int) error {
@@ -17,6 +19,8 @@ func (a *App) GetBankHolidays(ctx context.Context, year int) error {
 	}
 
 	a.bankholidays = m
+
+	log.Infof("Bank Holiday List\n %+v\n\n", m)
 
 	return nil
 }
