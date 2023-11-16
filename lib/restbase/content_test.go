@@ -18,8 +18,8 @@ func TestEncode(t *testing.T) {
 		MIMEType   string
 		Error      error
 	}{
-		{"DefaultEncodingJSON", "foo", http.StatusOK, []byte(`"foo"` + "\n"), "application/json; charset=utf-8", nil},
-		{"NoAccept", "foo", http.StatusOK, []byte(`"foo"` + "\n"), "application/json; charset=utf-8", nil},
+		{"DefaultEncodingJSON", "test", http.StatusOK, []byte(`"test"` + "\n"), "application/json; charset=utf-8", nil},
+		{"NoAccept", "test", http.StatusOK, []byte(`"test"` + "\n"), "application/json; charset=utf-8", nil},
 	}
 
 	for _, test := range tests {
