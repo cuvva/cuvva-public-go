@@ -60,7 +60,21 @@ func ForkContext(ctx context.Context, fn func(context.Context) error) {
 
 // ForkContextWithTimeout provides a callback function with a new context inheriting values from the request context with a timeout, and will log any error returned by the callback
 func ForkContextWithTimeout(ctx context.Context, timeout time.Duration, fn func(context.Context) error) {
-	defer func() {
+	go func() {
+		var err error
+		defer func() {
+			p := recover()
+			if p != nil {
+				err = fmt.Errorf("panic: %w", p)
+			}
+			
+			if err != nil {
+				clog.Get(newCtx).WithError(err).Log(clog.DetermineLevel(err, true), "forked context errored")
+			}
+		}
+		
+		err = fn(newCtx)
+	}()
 		if r := recover(); r != nil {
 			err := fmt.Errorf("recovered from panic: %v", r)
 			if err != nil {
