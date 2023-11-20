@@ -2,6 +2,7 @@ package request
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/cuvva/cuvva-public-go/lib/clog"
@@ -40,12 +41,19 @@ type ContextKey string
 // ForkContext provides a callback function with a new context inheriting values from the request context, and will log any error returned by the callback
 func ForkContext(ctx context.Context, fn func(context.Context) error) {
 	newCtx := cloneContext(ctx)
-
 	go func() {
-		err := fn(newCtx)
-		if err != nil {
-			clog.Get(newCtx).WithError(err).Log(clog.DetermineLevel(err, true), "forked context errored")
-		}
+		var err error
+		defer func() {
+			if r := recover(); r != nil {
+				err = fmt.Errorf("panic: %v", r)
+			}
+
+			if err != nil {
+				clog.Get(ctx).WithError(err).Log(clog.DetermineLevel(err, true), "forked context errored")
+			}
+		}()
+
+		err = fn(newCtx)
 	}()
 }
 
@@ -54,10 +62,20 @@ func ForkContextWithTimeout(ctx context.Context, timeout time.Duration, fn func(
 	newCtx, cancel := context.WithTimeout(cloneContext(ctx), timeout)
 
 	go func() {
-		defer cancel()
-		err := fn(newCtx)
-		if err != nil {
-			clog.Get(newCtx).WithError(err).Log(clog.DetermineLevel(err, true), "forked context errored")
-		}
+		var err error
+		defer func() {
+			cancel()
+			r := recover()
+			if r != nil {
+				err = fmt.Errorf("panic: %v", r)
+			}
+
+			if err != nil {
+				clog.Get(ctx).WithError(err).Log(clog.DetermineLevel(err, true), "forked context errored")
+			}
+		}()
+
+		err = fn(newCtx)
 	}()
+
 }
