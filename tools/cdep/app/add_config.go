@@ -57,7 +57,10 @@ func (a App) AddToConfig(path, branchName, commitHash string) (bool, error) {
 }
 
 func (a App) doJsonUpdates(path string, branchName string, commitHash string, blob []byte) []byte {
-	attemptWarnIfOverride(blob, branchRegAdd, branchName, path)
+	override := promptIfOverride(blob, branchRegAdd, branchName, path)
+	if !override {
+		return blob
+	}
 
 	blob = attemptUpdate(blob, commitRegAdd, "commit", commitHash)
 	blob = attemptUpdate(blob, branchRegAdd, "branch", branchName)
@@ -68,7 +71,10 @@ func (a App) doJsonUpdates(path string, branchName string, commitHash string, bl
 }
 
 func (a App) doYamlUpdates(path string, branchName string, commitHash string, blob []byte) []byte {
-	attemptWarnIfOverride(blob, branchRegAddYaml, branchName, path)
+	override := promptIfOverride(blob, branchRegAddYaml, branchName, path)
+	if !override {
+		return blob
+	}
 
 	imagePrefix := "master"
 	if branchName != "master" {
@@ -133,16 +139,21 @@ func attemptUpdateYaml(blob []byte, reg *regexp.Regexp, key, value string) []byt
 	return blob
 }
 
-func attemptWarnIfOverride(blob []byte, reg *regexp.Regexp, newBranch, path string) {
+func promptIfOverride(blob []byte, reg *regexp.Regexp, newBranch, path string) bool {
 	matches := reg.FindSubmatch(blob)
 
 	if len(matches) <= 1 {
-		return
+		return true
 	}
 
 	branchName := string(matches[1])
 
 	if branchName != "master" && branchName != newBranch {
 		log.Warnf("Custom branch is going to be overriden, old: %s, new: %s, path: %s", branchName, newBranch, path)
+		override := boolPrompt("Override branch?")
+
+		return override
 	}
+
+	return true
 }
