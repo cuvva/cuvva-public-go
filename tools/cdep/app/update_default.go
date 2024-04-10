@@ -33,7 +33,7 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 
 	log.Info("fetching config repo")
 
-	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "fetch", "--all").Output(); err != nil {
+	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "fetch", "--all").CombinedOutput(); err != nil {
 		fmt.Println(string(out))
 		return err
 	}
@@ -64,7 +64,7 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 
 	log.Info("pulling config repo from remote")
 
-	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "pull", "origin", cdep.DefaultBranch).Output(); err != nil {
+	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "pull", "origin", cdep.DefaultBranch).CombinedOutput(); err != nil {
 		fmt.Println(string(out))
 		return err
 	}
@@ -170,7 +170,7 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 
 	log.Info("pushing commit to config repo")
 
-	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "push", "origin", cdep.DefaultBranch).Output(); err != nil {
+	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "push", "origin", cdep.DefaultBranch).CombinedOutput(); err != nil {
 		fmt.Println(string(out))
 		return err
 	}

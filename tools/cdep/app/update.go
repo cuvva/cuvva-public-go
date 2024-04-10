@@ -43,7 +43,7 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 
 	log.Info("fetching config repo")
 
-	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "fetch", "--all").Output(); err != nil {
+	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "fetch", "--all").CombinedOutput(); err != nil {
 		fmt.Println(string(out))
 		return err
 	}
@@ -69,14 +69,18 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 
 	defaultRef := fmt.Sprintf("refs/heads/%s", cdep.DefaultBranch)
 	if ref.Name().String() != defaultRef {
-		return cher.New("config_not_on_master", nil)
+		if !slicecontains.String(overruleChecks, "config_not_on_master") {
+			return cher.New("config_not_on_master", nil)
+		}
+
+		log.Warn("config_not_on_master overruled")
 	}
 
 	log.Info("pulling config repo from remote")
 
-	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "pull", "origin", cdep.DefaultBranch).Output(); err != nil {
+	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "pull").CombinedOutput(); err != nil {
 		fmt.Println(string(out))
-		return err
+		return fmt.Errorf("git pull: %w", err)
 	}
 
 	wt, err := configRepo.Worktree()
@@ -152,6 +156,24 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 					updatedFiles = append(updatedFiles, shorthandPath)
 				}
 			}
+		case "terra": // terraform
+			for _, workspace := range req.Items {
+				p := paths.GetPathForTerra(repoPath, req.System, env, workspace)
+
+				if _, err := os.Stat(p); err != nil {
+					log.Warn(err)
+				}
+
+				changed, err := a.AddToConfig(p, req.Branch, latestHash)
+				if err != nil {
+					return err
+				}
+
+				if changed {
+					shorthandPath := path.Join(req.System, env, "terra", workspace+".json")
+					updatedFiles = append(updatedFiles, shorthandPath)
+				}
+			}
 		default:
 			return cher.New("unexpected_type", cher.M{"type": req.Type})
 		}
@@ -188,7 +210,7 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 
 	log.Info("pushing commit to config repo")
 
-	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "push", "origin", cdep.DefaultBranch).Output(); err != nil {
+	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "push", "origin", "HEAD").CombinedOutput(); err != nil {
 		fmt.Println(string(out))
 		return fmt.Errorf("config git push: %w", err)
 	}
