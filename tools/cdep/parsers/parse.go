@@ -11,7 +11,7 @@ import (
 // exceptions of services that start with "service-"
 var exceptions = map[string]struct{}{
 	"web-underwriter": {},
-	"web-mid": {},
+	"web-mid":         {},
 }
 
 func Parse(args []string, branch string, prodSys bool, message string) (*Params, error) {
