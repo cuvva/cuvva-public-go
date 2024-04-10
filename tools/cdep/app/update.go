@@ -152,6 +152,24 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 					updatedFiles = append(updatedFiles, shorthandPath)
 				}
 			}
+		case "terra": // terraform
+			for _, workspace := range req.Items {
+				p := paths.GetPathForTerra(repoPath, req.System, env, workspace)
+
+				if _, err := os.Stat(p); err != nil {
+					log.Warn(err)
+				}
+
+				changed, err := a.AddToConfig(p, req.Branch, latestHash)
+				if err != nil {
+					return err
+				}
+
+				if changed {
+					shorthandPath := path.Join(req.System, env, "terra", workspace+".json")
+					updatedFiles = append(updatedFiles, shorthandPath)
+				}
+			}
 		default:
 			return cher.New("unexpected_type", cher.M{"type": req.Type})
 		}
