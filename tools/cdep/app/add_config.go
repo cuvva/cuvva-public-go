@@ -14,11 +14,11 @@ import (
 var commitFreeze = regexp.MustCompile(`(?m)"cdep_freeze"\s*:\s*true`)
 
 var commitRegAdd = regexp.MustCompile(`"commit"\s*:\s*"[a-f\d]{40}"`)
-var branchRegAdd = regexp.MustCompile(`"branch"\s*:\s*"([a-zA-Z\d_-]+)"`)
+var branchRegAdd = regexp.MustCompile(`"branch"\s*:\s*"([^"]+)"`)
 
 var commitRegAddYaml = regexp.MustCompile(`commit\s*:\s*"?[a-f\d]{40}"?`)
 var imageTagRegAddYaml = regexp.MustCompile(`tag\s*:\s*"?[a-z\d-]+"?`)
-var branchRegAddYaml = regexp.MustCompile(`branch\s*:\s*"?([a-zA-Z\d_-]+)"?`)
+var branchRegAddYaml = regexp.MustCompile(`branch\s*:\s*"?([^"]+)"?`)
 
 func (a App) AddToConfig(path, branchName, commitHash string) (bool, error) {
 	blob, err := os.ReadFile(path)
