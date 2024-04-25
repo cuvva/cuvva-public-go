@@ -18,7 +18,7 @@ var branchRegAdd = regexp.MustCompile(`"branch"\s*:\s*"([^"]+)"`)
 
 var commitRegAddYaml = regexp.MustCompile(`commit\s*:\s*"?[a-f\d]{40}"?`)
 var imageTagRegAddYaml = regexp.MustCompile(`tag\s*:\s*"?[a-z\d-]+"?`)
-var branchRegAddYaml = regexp.MustCompile(`branch\s*:\s*"?([^"]+)"?`)
+var branchRegAddYaml = regexp.MustCompile(`branch\s*:\s*"?(a-z\d-\.+)"?`)
 
 func (a App) AddToConfig(path, branchName, commitHash string) (bool, error) {
 	blob, err := os.ReadFile(path)
