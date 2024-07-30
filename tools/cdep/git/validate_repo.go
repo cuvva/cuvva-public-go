@@ -1,10 +1,11 @@
 package git
 
 import (
+	"errors"
+	"strings"
+
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 	gogit "github.com/go-git/go-git/v5"
-	"github.com/pkg/errors"
-	"strings"
 )
 
 func CheckRepo(repo *gogit.Repository) (*gogit.Remote, error) {
