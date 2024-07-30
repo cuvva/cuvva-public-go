@@ -29,11 +29,14 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 		return cher.New("invalid_operation", nil)
 	}
 
-	log.Info("getting latest commit hash")
+	if req.Commit == "" {
+		log.Info("getting latest commit hash")
+		latestHash, err := git.GetLatestCommitHash(ctx, req.Branch)
+		if err != nil {
+			return fmt.Errorf("failed to get commit hash: %w", err)
+		}
 
-	latestHash, err := git.GetLatestCommitHash(ctx, req.Branch)
-	if err != nil {
-		return fmt.Errorf("failed to get commit hash: %w", err)
+		req.Commit = latestHash
 	}
 
 	repoPath, err := paths.GetConfigRepo()
@@ -121,13 +124,13 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 					}
 				}
 
-				err := checkECRImage(p, latestHash, req.Branch)
+				err := checkECRImage(p, req.Commit, req.Branch)
 				if err != nil {
 					e := errors.Wrap(err, "ecr")
 					log.Warn(e)
 				}
 
-				changed, err := a.AddToConfig(p, req.Branch, latestHash)
+				changed, err := a.AddToConfig(p, req.Branch, req.Commit)
 				if err != nil {
 					return fmt.Errorf("add to config: %w", err)
 				}
@@ -146,7 +149,7 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 					log.Warn(err)
 				}
 
-				changed, err := a.AddToConfig(p, req.Branch, latestHash)
+				changed, err := a.AddToConfig(p, req.Branch, req.Commit)
 				if err != nil {
 					return err
 				}
@@ -164,7 +167,7 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 					log.Warn(err)
 				}
 
-				changed, err := a.AddToConfig(p, req.Branch, latestHash)
+				changed, err := a.AddToConfig(p, req.Branch, req.Commit)
 				if err != nil {
 					return err
 				}

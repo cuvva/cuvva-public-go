@@ -20,6 +20,7 @@ import (
 
 func init() {
 	UpdateCmd.Flags().StringP("branch", "b", cdep.DefaultBranch, "Branch to deploy")
+	UpdateCmd.Flags().StringP("commit", "c", "", "Commit to deploy instead of the latest")
 	UpdateCmd.Flags().BoolP("prod", "", false, "Work on prod")
 	UpdateCmd.Flags().BoolP("dry-run", "", false, "Dry run only?")
 	UpdateCmd.Flags().StringSliceP("overrule-checks", "", []string{}, "Overrule checks the tool does")
@@ -73,10 +74,19 @@ var UpdateCmd = &cobra.Command{
 			return err
 		}
 
-		params, err := parsers.Parse(args, branch, useProd, message)
+		commit, err := cmd.Flags().GetString("commit")
 		if err != nil {
 			return err
 		}
+
+		params, err := parsers.Parse(args, useProd)
+		if err != nil {
+			return err
+		}
+
+		params.Branch = branch
+		params.Message = message
+		params.Commit = commit
 
 		awsSession, err := session.NewSessionWithOptions(session.Options{
 			Profile: "root",

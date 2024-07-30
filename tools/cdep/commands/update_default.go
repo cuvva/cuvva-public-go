@@ -63,10 +63,19 @@ var UpdateDefaultCmd = &cobra.Command{
 			return err
 		}
 
-		params, err := parsers.Parse(args, cdep.DefaultBranch, useProd, message)
+		commit, err := cmd.Flags().GetString("commit")
 		if err != nil {
 			return err
 		}
+
+		params, err := parsers.Parse(args, useProd)
+		if err != nil {
+			return err
+		}
+
+		params.Branch = cdep.DefaultBranch
+		params.Message = message
+		params.Commit = commit
 
 		awsSession, err := session.NewSessionWithOptions(session.Options{
 			Profile: "root",
