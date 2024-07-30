@@ -1,9 +1,9 @@
 package git
 
 import (
-	"errors"
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 	gogit "github.com/go-git/go-git/v5"
+	"github.com/pkg/errors"
 	"strings"
 )
 
@@ -24,7 +24,7 @@ func CheckRepo(repo *gogit.Repository) (*gogit.Remote, error) {
 	remote := remotes[0]
 
 	if !isRemoteURLSSH(remote) {
-		return nil, errors.New("cuvva repo remote origin must be ssh url")
+		return nil, errors.New("cuvva repo remote origin url is not ssh")
 	}
 
 	return remotes[0], nil
