@@ -42,6 +42,7 @@ var UpdateDefaultCmd = &cobra.Command{
 	Long:  "Please read the README.md file",
 	Example: strings.Join([]string{
 		"update-default services avocado",
+		"update-default services avocado -c f1ec178befe6ed26ce9cec0aa419c763c203bc92",
 		"update-default lambda all",
 	}, "\n"),
 	Args: updateDefaultArgs,
