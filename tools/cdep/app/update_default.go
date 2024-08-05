@@ -21,9 +21,13 @@ import (
 func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChecks []string) error {
 	log.Info("getting latest commit hash")
 
-	latestHash, err := git.GetLatestCommitHash(ctx, req.Branch)
-	if err != nil {
-		return err
+	if req.Commit == "" {
+		latestHash, err := git.GetLatestCommitHash(ctx, req.Branch)
+		if err != nil {
+			return err
+		}
+
+		req.Commit = latestHash
 	}
 
 	repoPath, err := paths.GetConfigRepo()
@@ -115,7 +119,7 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 				var changed bool
 
 				if strings.HasSuffix(fullPath, "_base.json") || strings.HasSuffix(fullPath, ".yaml") {
-					changed, err = a.AddToConfig(fullPath, req.Branch, latestHash)
+					changed, err = a.AddToConfig(fullPath, req.Branch, req.Commit)
 					if err != nil {
 						return err
 					}

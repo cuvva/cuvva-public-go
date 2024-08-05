@@ -9,6 +9,7 @@ type Params struct {
 	Type        string
 	Environment string
 	Branch      string
+	Commit      string
 	System      string
 	Items       []string
 	Message     string
@@ -29,6 +30,10 @@ func (p Params) String(command string) (out string) {
 
 	if p.Branch != "master" {
 		out = fmt.Sprintf("%s -b %s", out, p.Branch)
+	}
+
+	if p.Commit != "" {
+		out = fmt.Sprintf("%s -c %s", out, p.Commit)
 	}
 
 	if p.System == "prod" {
