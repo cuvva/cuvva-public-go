@@ -135,20 +135,7 @@ func (l *ContextLogger) SetFields(fields logrus.Fields) *ContextLogger {
 
 // SetError updates the internal error
 func (l *ContextLogger) SetError(err error) *ContextLogger {
-	var stack string
-	if serr, ok := err.(stackTracer); ok {
-		st := serr.StackTrace()
-		stack = fmt.Sprintf("%+v", st)
-		if len(stack) > 0 && stack[0] == '\n' {
-			stack = stack[1:]
-		}
-	}
-
-	l.entry = l.entry.WithFields(logrus.Fields{
-		"error": err,
-		"stack": stack,
-	})
-
+	l.entry = l.entry.WithError(err)
 	return l
 }
 
@@ -216,6 +203,16 @@ func SetError(ctx context.Context, err error) error {
 	}
 
 	ctxLogger.SetError(err)
+
+	// add stack trace if available
+	if serr, ok := err.(stackTracer); ok {
+		st := serr.StackTrace()
+		stack := fmt.Sprintf("%+v", st)
+		if len(stack) > 0 && stack[0] == '\n' {
+			stack = stack[1:]
+		}
+		ctxLogger.SetField("stack_trace", stack)
+	}
 
 	cherErr := cher.E{}
 	if errors.As(err, &cherErr) {
