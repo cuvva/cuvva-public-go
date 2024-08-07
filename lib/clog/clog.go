@@ -4,6 +4,7 @@ package clog
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 
@@ -11,11 +12,17 @@ import (
 	"github.com/cuvva/cuvva-public-go/lib/servicecontext"
 	"github.com/cuvva/cuvva-public-go/lib/version"
 	"github.com/sirupsen/logrus"
+
+	errPkg "github.com/pkg/errors"
 )
 
 type contextKey string
 
 type Fields map[string]interface{}
+
+type stackTracer interface {
+	StackTrace() errPkg.StackTrace
+}
 
 // LoggerKey is the key used for request-scoped loggers in a requests context map
 const loggerKey contextKey = "clog"
@@ -196,6 +203,16 @@ func SetError(ctx context.Context, err error) error {
 	}
 
 	ctxLogger.SetError(err)
+
+	// add stack trace if available
+	if serr, ok := err.(stackTracer); ok {
+		st := serr.StackTrace()
+		stack := fmt.Sprintf("%+v", st)
+		if len(stack) > 0 && stack[0] == '\n' {
+			stack = stack[1:]
+		}
+		ctxLogger.SetField("stack_trace", stack)
+	}
 
 	cherErr := cher.E{}
 	if errors.As(err, &cherErr) {
