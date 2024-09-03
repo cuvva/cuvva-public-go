@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 
 	"github.com/pkg/errors"
-	"slices"
 )
 
 // errors that are expected to be common across services
