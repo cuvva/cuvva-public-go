@@ -193,7 +193,7 @@ func TestWrapIfNotCherCodes(t *testing.T) {
 	}
 }
 
-func TestIsCherWithCode(t *testing.T) {
+func TestAsCherWithCode(t *testing.T) {
 	type testCase struct {
 		name   string
 		err    error
