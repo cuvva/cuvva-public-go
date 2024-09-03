@@ -18,7 +18,7 @@ func TestE(t *testing.T) {
 			Code: NotFound,
 			Meta: m,
 			Reasons: []E{
-				E{Code: "foo"},
+				{Code: "foo"},
 			},
 		})
 	})
@@ -189,6 +189,75 @@ func TestWrapIfNotCherCodes(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			result := WrapIfNotCher(tc.err, tc.msg)
 			tc.expect(t, result)
+		})
+	}
+}
+
+func TestIsCherWithCode(t *testing.T) {
+	type testCase struct {
+		name   string
+		err    error
+		codes  []string
+		expect func(t *testing.T, cErr E, ok bool)
+	}
+
+	tests := []testCase{
+		{
+			name:  "nil",
+			err:   nil,
+			codes: []string{"code_1"},
+			expect: func(t *testing.T, cErr E, ok bool) {
+				assert.False(t, ok)
+			},
+		},
+		{
+			name:  "normal error",
+			err:   fmt.Errorf("nope"),
+			codes: []string{"code_1"},
+			expect: func(t *testing.T, cErr E, ok bool) {
+				assert.False(t, ok)
+			},
+		},
+		{
+			name:  "normal error with same string",
+			err:   fmt.Errorf("code_1"),
+			codes: []string{"code_1"},
+			expect: func(t *testing.T, cErr E, ok bool) {
+				assert.False(t, ok)
+			},
+		},
+		{
+			name:  "cher specified code",
+			err:   New("code_1", nil),
+			codes: []string{"code_1"},
+			expect: func(t *testing.T, cErr E, ok bool) {
+				assert.True(t, ok)
+				assert.Equal(t, "code_1", cErr.Code)
+			},
+		},
+		{
+			name:  "cher other code",
+			err:   New("unknown", nil),
+			codes: []string{"code_1"},
+			expect: func(t *testing.T, cErr E, ok bool) {
+				assert.False(t, ok)
+			},
+		},
+		{
+			name:  "wrapped cher",
+			err:   errors.Wrap(New("code_1", nil), "wrapped"),
+			codes: []string{"code_1"},
+			expect: func(t *testing.T, cErr E, ok bool) {
+				assert.True(t, ok)
+				assert.Equal(t, "code_1", cErr.Code)
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cErr, ok := IsCherWithCode(tc.err, tc.codes...)
+			tc.expect(t, cErr, ok)
 		})
 	}
 }

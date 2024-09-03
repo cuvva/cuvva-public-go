@@ -177,14 +177,18 @@ func WrapIfNotCher(err error, msg string) error {
 
 // WrapIfNotCherCodes will wrap an error unless it is a cher with specific codes.
 func WrapIfNotCherCodes(err error, msg string, codes []string) error {
-	if err == nil {
-		return nil
-	}
+	return WrapIfNotCherCode(err, msg, codes...)
+}
 
+func WrapIfNotCherCode(err error, msg string, codes ...string) error {
 	var cErr E
 	if errors.As(err, &cErr) && slicecontains.String(codes, cErr.Code) {
 		return cErr
 	}
 
 	return errors.Wrap(err, msg)
+}
+
+func IsCherWithCode(err error, codes ...string) (cErr E, ok bool) {
+	return cErr, errors.As(err, &cErr) && slicecontains.String(codes, cErr.Code)
 }
