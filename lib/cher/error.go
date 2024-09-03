@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/cuvva/cuvva-public-go/lib/slicecontains"
 	"github.com/pkg/errors"
+	"slices"
 )
 
 // errors that are expected to be common across services
@@ -182,13 +182,13 @@ func WrapIfNotCherCodes(err error, msg string, codes []string) error {
 
 func WrapIfNotCherCode(err error, msg string, codes ...string) error {
 	var cErr E
-	if errors.As(err, &cErr) && slicecontains.String(codes, cErr.Code) {
+	if errors.As(err, &cErr) && slices.Contains(codes, cErr.Code) {
 		return cErr
 	}
 
 	return errors.Wrap(err, msg)
 }
 
-func IsCherWithCode(err error, codes ...string) (cErr E, ok bool) {
-	return cErr, errors.As(err, &cErr) && slicecontains.String(codes, cErr.Code)
+func AsCherWithCode(err error, codes ...string) (cErr E, ok bool) {
+	return cErr, errors.As(err, &cErr) && slices.Contains(codes, cErr.Code)
 }

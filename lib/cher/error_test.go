@@ -256,7 +256,7 @@ func TestIsCherWithCode(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			cErr, ok := IsCherWithCode(tc.err, tc.codes...)
+			cErr, ok := AsCherWithCode(tc.err, tc.codes...)
 			tc.expect(t, cErr, ok)
 		})
 	}
