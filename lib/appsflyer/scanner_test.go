@@ -64,7 +64,7 @@ func TestFilterNextKey(t *testing.T) {
 	}
 	for _, c := range cases {
 		s3Key, err := filterNextS3Key(c.S3Keys, c.PresentS3Key)
-		t.Logf(c.Test)
+		t.Log(c.Test)
 		if c.ExpectedError {
 			assert.Error(t, err)
 			assert.Nil(t, c.ExpectedNewS3Key)
