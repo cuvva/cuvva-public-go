@@ -1,7 +1,7 @@
 package app
 
 import (
-	"io/ioutil"
+	"os"
 	"path"
 
 	log "github.com/sirupsen/logrus"
@@ -19,7 +19,7 @@ func (a App) LoadEnvs(repoPath, system, env string) (map[string]struct{}, error)
 
 	log.Info("loading ALL environments")
 
-	files, err := ioutil.ReadDir(path.Join(repoPath, system))
+	files, err := os.ReadDir(path.Join(repoPath, system))
 	if err != nil {
 		return nil, err
 	}

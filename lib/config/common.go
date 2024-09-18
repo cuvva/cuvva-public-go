@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,9 +15,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/cuvva/cuvva-public-go/lib/db/mongodb"
 	"github.com/go-redis/redis"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readconcern"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
+	"golang.org/x/sync/errgroup"
 )
 
 // Redis configures a connection to a Redis database.
@@ -59,20 +63,31 @@ func (r Redis) Connect() (*redis.Client, error) {
 
 // MongoDB configures a connection to a Mongo database.
 type MongoDB struct {
-	URI string `json:"uri"`
+	URI             string         `json:"uri"`
+	ConnectTimeout  time.Duration  `json:"connect_timeout"`
+	MaxConnIdleTime *time.Duration `json:"max_conn_idle_time"`
+	MaxConnecting   *uint64        `json:"max_connecting"`
+	MaxPoolSize     *uint64        `json:"max_pool_size"`
+	MinPoolSize     *uint64        `json:"min_pool_size"`
 }
 
 // Options returns the MongoDB client options and database name.
 func (m MongoDB) Options() (opts *options.ClientOptions, dbName string, err error) {
 	opts = options.Client().ApplyURI(m.URI)
+	opts.MaxConnIdleTime = m.MaxConnIdleTime
+	opts.MaxConnecting = m.MaxConnecting
+	opts.MaxPoolSize = m.MaxPoolSize
+	opts.MinPoolSize = m.MinPoolSize
+
 	err = opts.Validate()
 	if err != nil {
 		return
 	}
 
-	// all Go services use majority writes, and this is unlikely to change
+	// all Go services use majority reads/writes, and this is unlikely to change
 	// if it does change, switch to accepting as an argument
-	opts.WriteConcern = writeconcern.New(writeconcern.WMajority())
+	opts.SetReadConcern(readconcern.Majority())
+	opts.SetWriteConcern(writeconcern.New(writeconcern.WMajority(), writeconcern.J(true)))
 
 	cs, err := connstring.Parse(m.URI)
 	if err != nil {
@@ -94,9 +109,13 @@ func (m MongoDB) Connect() (*mongodb.Database, error) {
 		return nil, err
 	}
 
+	if m.ConnectTimeout == 0 {
+		m.ConnectTimeout = 10 * time.Second
+	}
+
 	// this package can only be used for service config
 	// so can only happen at init-time - no need to accept context input
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), m.ConnectTimeout)
 	defer cancel()
 
 	return mongodb.Connect(ctx, opts, dbName)
@@ -163,7 +182,7 @@ func (cfg *Server) ListenAndServe(srv *http.Server) error {
 	}
 
 	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGTERM)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
 	errs := make(chan error, 1)
 
@@ -188,6 +207,67 @@ func (cfg *Server) ListenAndServe(srv *http.Server) error {
 
 		return nil
 	}
+}
+
+func (cfg *Server) Listen() (net.Listener, error) {
+	l, err := net.Listen("tcp", cfg.Addr)
+	if err != nil {
+		return nil, err
+	}
+
+	return l, nil
+}
+
+// Serve the HTTP requests on the specified listener, and gracefully close when the context is cancelled.
+func (cfg *Server) Serve(ctx context.Context, l net.Listener, srv *http.Server) (err error) {
+	eg, egCtx := errgroup.WithContext(ctx)
+
+	eg.Go(func() error {
+		err := srv.Serve(l)
+		if err == http.ErrServerClosed {
+			return nil
+		}
+
+		return err
+	})
+
+	eg.Go(func() error {
+		select {
+		case <-ctx.Done():
+			logrus.Println("shutting down gracefully")
+			ctx, cancel := context.WithTimeout(context.Background(), cfg.GracefulTimeout())
+			defer cancel()
+			return srv.Shutdown(ctx)
+		case <-egCtx.Done():
+			return nil
+		}
+	})
+
+	return eg.Wait()
+}
+
+func (cfg *Server) GracefulTimeout() time.Duration {
+	if cfg.Graceful == 0 {
+		cfg.Graceful = DefaultGraceful
+	}
+
+	return time.Duration(cfg.Graceful) * time.Second
+}
+
+func ContextWithCancelOnSignal(ctx context.Context) context.Context {
+	ctx, cancel := context.WithCancel(ctx)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+
+	go func() {
+		defer cancel()
+		select {
+		case <-stop:
+		case <-ctx.Done():
+		}
+	}()
+
+	return ctx
 }
 
 // UnderwriterOpts represents the underwriters info/models options.

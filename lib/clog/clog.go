@@ -5,9 +5,11 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/cuvva/cuvva-public-go/lib/servicecontext"
+	"github.com/cuvva/cuvva-public-go/lib/version"
 	"github.com/sirupsen/logrus"
 )
 
@@ -51,10 +53,15 @@ type Config struct {
 }
 
 // Configure applies Cuvva standard Logging structure options to a logrus Entry.
-func (c Config) Configure() (log *logrus.Entry) {
+func (c Config) Configure(ctx context.Context) (log *logrus.Entry) {
+	var serviceName string
+	if svc := servicecontext.GetContext(ctx); svc != nil {
+		serviceName = svc.Name
+	}
+
 	log = logrus.WithFields(logrus.Fields{
-		ServiceKey: servicecontext.Get().Name,
-		VersionKey: servicecontext.Get().Revision,
+		ServiceKey: serviceName,
+		VersionKey: version.Revision,
 	})
 
 	hostname, err := os.Hostname()
@@ -93,7 +100,8 @@ func (c Config) Configure() (log *logrus.Entry) {
 // context itself can store a pointer to a ContextLogger, so it doesn't need
 // replacing each time new fields are added to the logger
 type ContextLogger struct {
-	entry *logrus.Entry
+	entry            *logrus.Entry
+	timeoutsAsErrors bool
 }
 
 // NewContextLogger creates a new (mutable) ContextLogger instance from an (immutable) logrus Entry
@@ -189,10 +197,12 @@ func SetError(ctx context.Context, err error) error {
 
 	ctxLogger.SetError(err)
 
-	if cherErr, ok := err.(cher.E); ok {
+	cherErr := cher.E{}
+	if errors.As(err, &cherErr) {
 		if len(cherErr.Reasons) > 0 {
 			ctxLogger.SetField("error_reasons", cherErr.Reasons)
 		}
+
 		if cherErr.Meta != nil {
 			ctxLogger.SetField("error_meta", cherErr.Meta)
 		}
@@ -201,8 +211,28 @@ func SetError(ctx context.Context, err error) error {
 	return nil
 }
 
+// ConfigureTimeoutsAsErrors changes to default behaviour of logging timeouts as info, to log them as errors
+func ConfigureTimeoutsAsErrors(ctx context.Context) {
+	ctxLogger := getContextLogger(ctx)
+	if ctxLogger == nil {
+		return
+	}
+
+	ctxLogger.timeoutsAsErrors = true
+}
+
+// TimeoutsAsErrors determines whether ConfigureTimeoutsAsErrors was called on the context
+func TimeoutsAsErrors(ctx context.Context) bool {
+	ctxLogger := getContextLogger(ctx)
+	if ctxLogger == nil {
+		return false
+	}
+
+	return ctxLogger.timeoutsAsErrors
+}
+
 // DetermineLevel returns a suggested logrus Level type for a given error
-func DetermineLevel(err error) logrus.Level {
+func DetermineLevel(err error, timeoutsAsErrors bool) logrus.Level {
 	if cherError, ok := err.(cher.E); ok {
 		switch cherError.Code {
 
@@ -210,6 +240,9 @@ func DetermineLevel(err error) logrus.Level {
 		case cher.BadRequest, cher.RequestTimeout:
 			return logrus.WarnLevel
 		case cher.ContextCanceled:
+			if timeoutsAsErrors {
+				return logrus.ErrorLevel
+			}
 			return logrus.InfoLevel
 		case cher.Unknown, cher.CoercionError:
 			return logrus.ErrorLevel
@@ -218,6 +251,19 @@ func DetermineLevel(err error) logrus.Level {
 		default:
 			return logrus.WarnLevel
 		}
+	}
+
+	if strings.Contains(err.Error(), "canceling statement due to user request") {
+		if timeoutsAsErrors {
+			return logrus.ErrorLevel
+		}
+		return logrus.InfoLevel
+	}
+
+	// pgx pool request context cancelled while connecting
+	if strings.Contains(err.Error(), "operation was canceled") &&
+		strings.Contains(err.Error(), "failed to connect to") {
+		return logrus.InfoLevel
 	}
 
 	// non-cher errors are "unhandled" so warrant an error

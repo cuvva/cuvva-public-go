@@ -8,8 +8,9 @@ import (
 )
 
 // GenerateRota generates a rota based on a schedule and month
-func (a *App) GenerateRota(scheduleID string, year int, month time.Month) (oncallcalc.Rota, interface{}, error) {
+func (a *App) GenerateRota(scheduleIDs []string, year int, month time.Month) (oncallcalc.Rota, interface{}, error) {
 	loc, err := time.LoadLocation("Europe/London")
+
 	if err != nil {
 		panic(err)
 	}
@@ -17,7 +18,7 @@ func (a *App) GenerateRota(scheduleID string, year int, month time.Month) (oncal
 	monthStart := time.Date(year, month, 1, 0, 0, 0, 0, loc)
 	monthEnd := monthStart.AddDate(0, 1, 0)
 
-	pdshifts, badShift, err := a.ListPagerDutyShifts(scheduleID, monthStart, monthEnd)
+	pdshifts, badShift, err := a.ListPagerDutyShifts(scheduleIDs, monthStart, monthEnd)
 	if err != nil {
 		return nil, badShift, err
 	}

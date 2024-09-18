@@ -8,17 +8,20 @@ import (
 	"github.com/cuvva/cuvva-public-go/tools/oncallcalc/app"
 	"github.com/cuvva/cuvva-public-go/tools/oncallcalc/config"
 	"github.com/cuvva/cuvva-public-go/tools/oncallcalc/lib/govuk"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-var ScheduleID string
+var ScheduleIDs []string
 var TimeIn string
 var Verbose bool
 
 func init() {
-	GenerateReportCmd.Flags().StringVarP(&ScheduleID, "schedule_id", "s", "PKICNIO", "Schedule ID from PagerDuty")
+	GenerateReportCmd.Flags().StringArrayVarP(&ScheduleIDs, "schedule_id", "s", []string{"PKICNIO", "PKW2AKK"}, "Schedule IDs from PagerDuty")
 	GenerateReportCmd.Flags().StringVarP(&TimeIn, "time", "t", "Jan 2020", "Which month and year should we look at?")
 	GenerateReportCmd.Flags().BoolVarP(&Verbose, "verbose", "v", false, "Verbose mode?")
+	// Update the log level if
+	log.SetLevel(log.ErrorLevel)
 }
 
 var GenerateReportCmd = &cobra.Command{
@@ -49,7 +52,7 @@ var GenerateReportCmd = &cobra.Command{
 			return err
 		}
 
-		rota, debug, err := app.GenerateRota(ScheduleID, timeIn.Year(), timeIn.Month())
+		rota, debug, err := app.GenerateRota(ScheduleIDs, timeIn.Year(), timeIn.Month())
 		if err != nil {
 			if Verbose {
 				cmd.Printf("%+v\n", debug)
@@ -57,6 +60,7 @@ var GenerateReportCmd = &cobra.Command{
 			return err
 		}
 
+		cmd.Printf("\n")
 		cmd.Println(app.StringifyRota(rota))
 
 		return nil

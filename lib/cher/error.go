@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 
 	"github.com/pkg/errors"
 )
@@ -24,6 +25,7 @@ const (
 	EOF               = "eof"
 	UnexpectedEOF     = "unexpected_eof"
 	RequestTimeout    = "request_timeout"
+	ThirdPartyTimeout = "third_party_timeout"
 
 	CoercionError = "unable_to_coerce_error"
 )
@@ -151,4 +153,42 @@ func Coerce(v interface{}) E {
 
 func (e E) Value() (driver.Value, error) {
 	return json.Marshal(e)
+}
+
+// WrapIfNotCher will not wrap the error if it is any cher except unknown.
+//
+// Unless you don't know the codes you could get back, you should use WrapIfNotCherCodes.
+func WrapIfNotCher(err error, msg string) error {
+	if err == nil {
+		return nil
+	}
+
+	var cErr E
+	if errors.As(err, &cErr) {
+		if cErr.Code == Unknown {
+			return errors.Wrap(err, msg)
+		}
+
+		return cErr
+	}
+
+	return errors.Wrap(err, msg)
+}
+
+// WrapIfNotCherCodes will wrap an error unless it is a cher with specific codes.
+func WrapIfNotCherCodes(err error, msg string, codes []string) error {
+	return WrapIfNotCherCode(err, msg, codes...)
+}
+
+func WrapIfNotCherCode(err error, msg string, codes ...string) error {
+	var cErr E
+	if errors.As(err, &cErr) && slices.Contains(codes, cErr.Code) {
+		return cErr
+	}
+
+	return errors.Wrap(err, msg)
+}
+
+func AsCherWithCode(err error, codes ...string) (cErr E, ok bool) {
+	return cErr, errors.As(err, &cErr) && slices.Contains(codes, cErr.Code)
 }

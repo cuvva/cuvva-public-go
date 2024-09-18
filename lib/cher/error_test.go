@@ -1,10 +1,11 @@
 package cher
 
 import (
-	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,7 +18,7 @@ func TestE(t *testing.T) {
 			Code: NotFound,
 			Meta: m,
 			Reasons: []E{
-				E{Code: "foo"},
+				{Code: "foo"},
 			},
 		})
 	})
@@ -82,6 +83,181 @@ func TestCoerce(t *testing.T) {
 			e := Coerce(test.Src)
 
 			assert.Equal(t, test.Result, e)
+		})
+	}
+}
+
+func TestWrapIfNotCher(t *testing.T) {
+	type testCase struct {
+		name   string
+		msg    string
+		err    error
+		expect func(*testing.T, error)
+	}
+
+	tests := []testCase{
+		{
+			name: "nil",
+			msg:  "foo",
+			err:  nil,
+			expect: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "err",
+			msg:  "foo",
+			err:  fmt.Errorf("nope"),
+			expect: func(t *testing.T, err error) {
+				assert.EqualError(t, err, "foo: nope")
+			},
+		},
+		{
+			name: "cher",
+			msg:  "foo",
+			err:  New("nope", nil),
+			expect: func(t *testing.T, err error) {
+				cErr, ok := err.(E)
+				assert.True(t, ok)
+				assert.Equal(t, "nope", cErr.Code)
+			},
+		},
+		{
+			name: "cher unknown",
+			msg:  "foo",
+			err:  New("unknown", nil),
+			expect: func(t *testing.T, err error) {
+				assert.EqualError(t, err, "foo: unknown")
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := WrapIfNotCher(tc.err, tc.msg)
+			tc.expect(t, result)
+		})
+	}
+}
+
+func TestWrapIfNotCherCodes(t *testing.T) {
+	type testCase struct {
+		name   string
+		msg    string
+		err    error
+		expect func(*testing.T, error)
+	}
+
+	tests := []testCase{
+		{
+			name: "nil",
+			msg:  "foo",
+			err:  nil,
+			expect: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "err",
+			msg:  "foo",
+			err:  fmt.Errorf("nope"),
+			expect: func(t *testing.T, err error) {
+				assert.EqualError(t, err, "foo: nope")
+			},
+		},
+		{
+			name: "cher specified code",
+			msg:  "foo",
+			err:  New("code_1", nil),
+			expect: func(t *testing.T, err error) {
+				cErr, ok := err.(E)
+				assert.True(t, ok)
+				assert.Equal(t, "code_1", cErr.Code)
+			},
+		},
+		{
+			name: "cher other code",
+			msg:  "foo",
+			err:  New("unknown", nil),
+			expect: func(t *testing.T, err error) {
+				assert.EqualError(t, err, "foo: unknown")
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := WrapIfNotCher(tc.err, tc.msg)
+			tc.expect(t, result)
+		})
+	}
+}
+
+func TestAsCherWithCode(t *testing.T) {
+	type testCase struct {
+		name   string
+		err    error
+		codes  []string
+		expect func(t *testing.T, cErr E, ok bool)
+	}
+
+	tests := []testCase{
+		{
+			name:  "nil",
+			err:   nil,
+			codes: []string{"code_1"},
+			expect: func(t *testing.T, cErr E, ok bool) {
+				assert.False(t, ok)
+			},
+		},
+		{
+			name:  "normal error",
+			err:   fmt.Errorf("nope"),
+			codes: []string{"code_1"},
+			expect: func(t *testing.T, cErr E, ok bool) {
+				assert.False(t, ok)
+			},
+		},
+		{
+			name:  "normal error with same string",
+			err:   fmt.Errorf("code_1"),
+			codes: []string{"code_1"},
+			expect: func(t *testing.T, cErr E, ok bool) {
+				assert.False(t, ok)
+			},
+		},
+		{
+			name:  "cher specified code",
+			err:   New("code_1", nil),
+			codes: []string{"code_1"},
+			expect: func(t *testing.T, cErr E, ok bool) {
+				assert.True(t, ok)
+				assert.Equal(t, "code_1", cErr.Code)
+			},
+		},
+		{
+			name:  "cher other code",
+			err:   New("unknown", nil),
+			codes: []string{"code_1"},
+			expect: func(t *testing.T, cErr E, ok bool) {
+				assert.False(t, ok)
+			},
+		},
+		{
+			name:  "wrapped cher",
+			err:   errors.Wrap(New("code_1", nil), "wrapped"),
+			codes: []string{"code_1"},
+			expect: func(t *testing.T, cErr E, ok bool) {
+				assert.True(t, ok)
+				assert.Equal(t, "code_1", cErr.Code)
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cErr, ok := AsCherWithCode(tc.err, tc.codes...)
+			tc.expect(t, cErr, ok)
 		})
 	}
 }

@@ -3,7 +3,6 @@ package ndjsonscanner
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -79,7 +78,7 @@ func TestNewScannerEmptyReaderClose(t *testing.T) {
 func TestNewURLScanner(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/nd+json")
-		file, err := ioutil.ReadFile("sample.ndjson")
+		file, err := os.ReadFile("sample.ndjson")
 		if err != nil {
 			panic(err)
 		}
@@ -129,7 +128,7 @@ func TestNewURLScannerGzip(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/nd+json")
 		w.Header().Set("Content-Encoding", "gzip")
-		file, err := ioutil.ReadFile("sample.ndjson.gz")
+		file, err := os.ReadFile("sample.ndjson.gz")
 		if err != nil {
 			panic(err)
 		}
@@ -210,7 +209,7 @@ func TestNewURLScannerEmptyBody(t *testing.T) {
 func TestNewBufferScannerScanCallExistsEarly(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/nd+json")
-		file, err := ioutil.ReadFile("baddata.ndjson")
+		file, err := os.ReadFile("baddata.ndjson")
 		if err != nil {
 			panic(err)
 		}

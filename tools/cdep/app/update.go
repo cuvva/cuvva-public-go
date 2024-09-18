@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -23,28 +22,31 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var imageName = regexp.MustCompile(`"docker_image_name"\s*:\s*"([a-zA-Z\d_-]+)"`)
+var imageName = regexp.MustCompile(`"?docker_image_name"?\s*:\s*"?([a-zA-Z\d_-]+)"?`)
 
 func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []string) error {
 	if req.Environment == "prod" && req.Branch != cdep.DefaultBranch {
 		return cher.New("invalid_operation", nil)
 	}
 
-	log.Info("getting latest commit hash")
+	if req.Commit == "" {
+		log.Info("getting latest commit hash")
+		latestHash, err := git.GetLatestCommitHash(ctx, req.Branch)
+		if err != nil {
+			return fmt.Errorf("failed to get commit hash: %w", err)
+		}
 
-	latestHash, err := git.GetLatestCommitHash(ctx, req.Branch)
-	if err != nil {
-		return err
+		req.Commit = latestHash
 	}
 
 	repoPath, err := paths.GetConfigRepo()
 	if err != nil {
-		return err
+		return fmt.Errorf("path get config repo: %w", err)
 	}
 
 	log.Info("fetching config repo")
 
-	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "fetch", "--all").Output(); err != nil {
+	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "fetch", "--all").CombinedOutput(); err != nil {
 		fmt.Println(string(out))
 		return err
 	}
@@ -60,35 +62,39 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 
 	_, err = git.CheckRepo(configRepo)
 	if err != nil {
-		return err
+		return fmt.Errorf("config git check repo: %w", err)
 	}
 
 	ref, err := configRepo.Head()
 	if err != nil {
-		return err
+		return fmt.Errorf("config git head: %w", err)
 	}
 
 	defaultRef := fmt.Sprintf("refs/heads/%s", cdep.DefaultBranch)
 	if ref.Name().String() != defaultRef {
-		return cher.New("config_not_on_mater", nil)
+		if !slicecontains.String(overruleChecks, "config_not_on_master") {
+			return cher.New("config_not_on_master", nil)
+		}
+
+		log.Warn("config_not_on_master overruled")
 	}
 
 	log.Info("pulling config repo from remote")
 
-	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "pull", "origin", cdep.DefaultBranch).Output(); err != nil {
+	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "pull").CombinedOutput(); err != nil {
 		fmt.Println(string(out))
-		return err
+		return fmt.Errorf("git pull: %w", err)
 	}
 
 	wt, err := configRepo.Worktree()
 	if err != nil {
-		return err
+		return fmt.Errorf("config git work tree: %w", err)
 	}
 
 	err = git.CheckWorkingCopy(wt)
 	if err != nil {
 		if !slicecontains.String(overruleChecks, "working_copy_dirty") {
-			return err
+			return fmt.Errorf("config git check working copy: %w", err)
 		}
 
 		log.Warn("working_copy_dirty overruled")
@@ -100,7 +106,7 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 
 	envs, err := a.LoadEnvs(repoPath, req.System, req.Environment)
 	if err != nil {
-		return err
+		return fmt.Errorf("load envs: %w", err)
 	}
 
 	for env := range envs {
@@ -110,22 +116,28 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 				p := paths.GetPathForService(repoPath, req.System, env, service)
 
 				if _, err := os.Stat(p); err != nil {
-					log.Warn(err)
+					p = paths.GetYamlPathForService(repoPath, req.System, env, service)
+					_, err2 := os.Stat(p)
+					if err2 != nil {
+						log.Warn(err)
+						log.Warn(err2)
+					}
 				}
 
-				err := checkECRImage(p, latestHash, req.Branch)
+				err := checkECRImage(p, req.Commit, req.Branch)
 				if err != nil {
-					e := errors.Wrap(err, "ecr:")
+					e := errors.Wrap(err, "ecr")
 					log.Warn(e)
 				}
 
-				changed, err := a.AddToConfig(p, req.Branch, latestHash)
+				changed, err := a.AddToConfig(p, req.Branch, req.Commit)
 				if err != nil {
-					return err
+					return fmt.Errorf("add to config: %w", err)
 				}
 
 				if changed {
-					shorthandPath := path.Join(req.System, env, "service", service+".json")
+					filename := path.Base(p)
+					shorthandPath := path.Join(req.System, env, "service", filename)
 					updatedFiles = append(updatedFiles, shorthandPath)
 				}
 			}
@@ -137,13 +149,31 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 					log.Warn(err)
 				}
 
-				changed, err := a.AddToConfig(p, req.Branch, latestHash)
+				changed, err := a.AddToConfig(p, req.Branch, req.Commit)
 				if err != nil {
 					return err
 				}
 
 				if changed {
 					shorthandPath := path.Join(req.System, env, "lambda", lambda+".json")
+					updatedFiles = append(updatedFiles, shorthandPath)
+				}
+			}
+		case "terra": // terraform
+			for _, workspace := range req.Items {
+				p := paths.GetPathForTerra(repoPath, req.System, env, workspace)
+
+				if _, err := os.Stat(p); err != nil {
+					log.Warn(err)
+				}
+
+				changed, err := a.AddToConfig(p, req.Branch, req.Commit)
+				if err != nil {
+					return err
+				}
+
+				if changed {
+					shorthandPath := path.Join(req.System, env, "terra", workspace+".json")
 					updatedFiles = append(updatedFiles, shorthandPath)
 				}
 			}
@@ -159,7 +189,7 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 	commitMessage := fmt.Sprintf("cdep: %s", req.String("update"))
 
 	if err := a.PublishToSlack(ctx, req, commitMessage, updatedFiles, repoPath); err != nil {
-		return err
+		return fmt.Errorf("publish to slack: %w", err)
 	}
 
 	if a.DryRun {
@@ -172,27 +202,27 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 		log.Infof("adding %s to commit", p)
 		_, err := wt.Add(p)
 		if err != nil {
-			return err
+			return fmt.Errorf("config git add: %w", err)
 		}
 	}
 
 	_, err = wt.Commit(commitMessage, &gogit.CommitOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("config git commit: %w", err)
 	}
 
 	log.Info("pushing commit to config repo")
 
-	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "push", "origin", cdep.DefaultBranch).Output(); err != nil {
+	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "push", "origin", "HEAD").CombinedOutput(); err != nil {
 		fmt.Println(string(out))
-		return err
+		return fmt.Errorf("config git push: %w", err)
 	}
 
 	return nil
 }
 
 func checkECRImage(filePath, latestHash, branch string) error {
-	fileContents, err := ioutil.ReadFile(filePath)
+	fileContents, err := os.ReadFile(filePath)
 	if err != nil {
 		return err
 	}
@@ -235,7 +265,7 @@ func findBuildInECR(dockerImageName, latestHash, branch string) error {
 		},
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("batch get image: %w", err)
 	}
 
 	if len(images.Images) != 1 {

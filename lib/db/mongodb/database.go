@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
-	"io/ioutil"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -27,7 +27,7 @@ func (d Database) SetupSchemas(ctx context.Context, fs fs.FS, collectionNames []
 			return err
 		}
 
-		data, err := ioutil.ReadAll(file)
+		data, err := io.ReadAll(file)
 		if err != nil {
 			return err
 		}
@@ -50,4 +50,17 @@ func (d Database) SetupSchemas(ctx context.Context, fs fs.FS, collectionNames []
 	}
 
 	return nil
+}
+
+func (db *Database) DoTx(ctx context.Context, fn func(ctx mongo.SessionContext) error) error {
+	return db.DoTxWithOptions(ctx, options.Session(), fn)
+}
+
+func (db *Database) DoTxWithOptions(ctx context.Context, opts *options.SessionOptions, fn func(ctx mongo.SessionContext) error) error {
+	return db.Client().UseSessionWithOptions(ctx, opts, func(ctx mongo.SessionContext) error {
+		_, err := ctx.WithTransaction(ctx, func(ctx mongo.SessionContext) (interface{}, error) {
+			return nil, fn(ctx)
+		})
+		return err
+	})
 }

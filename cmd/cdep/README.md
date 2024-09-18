@@ -54,3 +54,10 @@ You need an environment variable (`CUVVA_CODE_REPO`) with the location of where 
 Due to the tool doing a git fetch/pull/push, you need to have your SSH keys in your SSH Agent otherwise it won't know which to use to contact GitHub.
 
 You can see what identities are already linked by going into your shell and entering `ssh-add -l`. If none are there, you'll need to add them by entering `ssh-add`.
+
+### `context deadline exceeded`
+
+This error originates from the third party package we are using to list the references on the remote repository.
+We are currently hard coding the context timeout to 30 seconds and at the time of writing this duration seems to be
+working fine. However, if it takes longer in future (which shouldn't really happen) you can bump it in the
+[monorepo.go](tools/cdep/git/monorepo.go) file where `remote.ListContext` function is called.

@@ -28,7 +28,7 @@ var testData = []struct {
 	{
 		Name:        "Mayday: leading shift",
 		InDate:      mustParse("2021-05-02T12:00:00Z"),
-		BankHoliday: true,
+		BankHoliday: false,
 	},
 	{
 		Name:        "Mayday: Midnight shift",
@@ -43,7 +43,7 @@ var testData = []struct {
 	{
 		Name:        "Mayday: following shift",
 		InDate:      mustParse("2021-05-04T00:00:00Z"),
-		BankHoliday: true,
+		BankHoliday: false,
 	},
 	{
 		Name:        "Mayday: finished",

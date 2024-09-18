@@ -22,12 +22,12 @@ type Client struct {
 
 // NewClient returns a client configured with a transport scheme, remote host
 // and URL prefix supplied as a URL <scheme>://<host></prefix>
-func NewClient(baseURL string, c *http.Client) *Client {
+func NewClient(ctx context.Context, baseURL string, c *http.Client) *Client {
 	jcc := jsonclient.NewClient(baseURL, c)
 
-	if servicecontext.IsSet() {
-		svc := servicecontext.Get()
-		jcc.UserAgent = fmt.Sprintf(userAgentTemplateWithService, svc.Version, svc.Name, svc.Environment)
+	svc := servicecontext.GetContext(ctx)
+	if svc != nil {
+		jcc.UserAgent = fmt.Sprintf(userAgentTemplateWithService, version.Truncated, svc.Name, svc.Environment)
 	} else {
 		jcc.UserAgent = fmt.Sprintf(userAgentTemplate, version.Truncated)
 	}
@@ -42,8 +42,8 @@ func (c *Client) WithUASuffix(suffix string) *Client {
 }
 
 // Do executes an RPC request against the configured server.
-func (c *Client) Do(ctx context.Context, method, version string, src, dst interface{}) error {
-	err := c.Client.Do(ctx, "POST", path.Join(version, method), nil, src, dst)
+func (c *Client) Do(ctx context.Context, method, version string, src, dst interface{}, requestModifiers ...func(r *http.Request)) error {
+	err := c.Client.Do(ctx, "POST", path.Join(version, method), nil, src, dst, requestModifiers...)
 
 	if err == nil {
 		return nil

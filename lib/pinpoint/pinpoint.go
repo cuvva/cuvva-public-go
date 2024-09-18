@@ -13,24 +13,28 @@ type JobsResponse struct {
 }
 
 type Job struct {
-	ID         string        `json:"id"`
-	Type       string        `json:"type"`
-	Attributes JobAttributes `json:"attributes"`
-	Links      JobLinks      `json:"links"`
+	ID                    string        `json:"id"`
+	Title                 string        `json:"title"`
+	EmploymentType        string        `json:"employment_type"`
+	Department            JobDepartment `json:"department"`
+	ReportingTo           string        `json:"reporting_to"`
+	CompensationMinimum   float64       `json:"compensation_minimum"`
+	CompensationMaximum   float64       `json:"compensation_maximum"`
+	CompensationCurrency  string        `json:"compensation_currency"`
+	CompensationFrequency string        `json:"compensation_frequency"`
+	CompensationVisible   bool          `json:"compensation_visible"`
+	URL                   string        `json:"url"`
+	Location              JobLocation   `json:"location"`
 }
 
-type JobAttributes struct {
-	DepartmentID   int    `json:"department_id"`
-	ID             int    `json:"id"`
-	Title          string `json:"title"`
-	LocationID     int    `json:"location_id"`
-	EmploymentType string `json:"employment_type"`
-	LocationName   string `json:"location_name"`
-	DepartmentName string `json:"department_name"`
+type JobDepartment struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
-type JobLinks struct {
-	ShowPath string `json:"show_path"`
+type JobLocation struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type Client struct {

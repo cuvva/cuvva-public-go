@@ -1,11 +1,14 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
+	"net"
 	"os"
 	"time"
 
 	"github.com/cuvva/cuvva-public-go/lib/ksuid"
+	"github.com/cuvva/cuvva-public-go/lib/servicecontext"
 	"github.com/spf13/cobra"
 )
 
@@ -28,10 +31,10 @@ var GenerateCommand = &cobra.Command{
 	Short:   "generate one or more ksuid",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		ksuid.SetEnvironment(generateEnvironment)
+		ctx := servicecontext.SetContext(cmd.Context(), "ksuid", generateEnvironment)
 
 		for n := 0; n < generateCount; n++ {
-			id := ksuid.Generate(generateResource)
+			id := ksuid.Generate(ctx, generateResource)
 
 			fmt.Println(id.String())
 		}
@@ -62,26 +65,28 @@ var ParseCommand = &cobra.Command{
 
 			fmt.Printf(
 				"ID:          %s\nResource:    %s\nEnvironment: %s\nTimestamp:   %s\n",
-				arg, id.Resource, id.Environment, id.Timestamp.Format(time.RFC3339),
+				arg, id.Resource, id.Environment, time.Unix(int64(id.Timestamp), 0).Format(time.RFC3339),
 			)
 
-			switch iid := id.InstanceID.(type) {
-			case *ksuid.HardwareID:
+			iid := id.InstanceID
+
+			switch iid.SchemeData {
+			case 'H':
 				fmt.Printf(
 					"Machine ID:  %s\nProcess ID:  %d\n",
-					iid.MachineID, iid.ProcessID,
+					net.HardwareAddr(iid.BytesData[:6]), binary.BigEndian.Uint16(iid.BytesData[6:]),
 				)
 
-			case *ksuid.DockerID:
+			case 'D':
 				fmt.Printf(
 					"Docker ID:   %x\n",
-					iid.ContainerID,
+					iid.Bytes(),
 				)
 
-			case *ksuid.RandomID:
+			case 'R':
 				fmt.Printf(
 					"Random ID:   %x\n",
-					iid.Random,
+					iid.Bytes(),
 				)
 
 			default:

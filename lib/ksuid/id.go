@@ -5,7 +5,6 @@ import (
 	"database/sql/driver"
 	"encoding/binary"
 	"encoding/json"
-	"time"
 
 	"github.com/jamescun/basex"
 	"go.mongodb.org/mongo-driver/bson"
@@ -18,7 +17,7 @@ type ID struct {
 	Environment string
 	Resource    string
 
-	Timestamp  time.Time
+	Timestamp  uint64
 	InstanceID InstanceID
 	SequenceID uint32
 }
@@ -63,8 +62,9 @@ func Parse(str string) (id ID, err error) {
 		return
 	}
 
-	id.Timestamp = time.Unix(int64(binary.BigEndian.Uint64(dst[:8])), 0).UTC()
-	id.InstanceID, err = ParseInstanceID(dst[8:17])
+	id.Timestamp = binary.BigEndian.Uint64(dst[:8])
+	id.InstanceID.SchemeData = dst[8]
+	copy(id.InstanceID.BytesData[:], dst[9:17])
 	id.SequenceID = binary.BigEndian.Uint32(dst[17:])
 
 	return
@@ -96,21 +96,12 @@ func splitPrefixID(s []byte) (environment, resource string, id []byte) {
 
 // IsZero returns true if id has not yet been initialized.
 func (id ID) IsZero() bool {
-	return id.Environment == "" && id.Resource == "" &&
-		id.Timestamp.IsZero() && id.InstanceID == nil &&
-		id.SequenceID == 0
+	return id == ID{}
 }
 
 // Equal returns true if the given ID matches id of the caller.
 func (id ID) Equal(x ID) bool {
-	if id.InstanceID == nil || x.InstanceID == nil {
-		return false
-	}
-
-	return id.Environment == x.Environment && id.Resource == x.Resource &&
-		id.InstanceID.Scheme() == x.InstanceID.Scheme() &&
-		id.InstanceID.Bytes() == x.InstanceID.Bytes() &&
-		id.Timestamp.Equal(x.Timestamp) && id.SequenceID == x.SequenceID
+	return id == x
 }
 
 // Scan implements a custom database/sql.Scanner to support
@@ -227,7 +218,7 @@ func (id ID) Bytes() []byte {
 
 	x := make([]byte, decodedLen)
 	y := make([]byte, encodedLen)
-	binary.BigEndian.PutUint64(x, uint64(id.Timestamp.Unix()))
+	binary.BigEndian.PutUint64(x, id.Timestamp)
 	x[8] = id.InstanceID.Scheme()
 	copy(x[9:], iid[:])
 	binary.BigEndian.PutUint32(x[17:], id.SequenceID)

@@ -52,12 +52,21 @@ type ConsumerSummary struct {
 }
 
 type ConsumerSummaryPremiumValueData struct {
-	Scoring  Map
-	AddrLink Map
-	AgeDOB   Map `xml:"AgeDoB"`
+	Scoring           Map
+	AddrLink          Map
+	AgeDOB            Map `xml:"AgeDoB"`
+	CII               Map
+	Mosaic            Map
+	AdditDelphiBlocks AdditDelphiBlocks
+}
+
+type AdditDelphiBlocks struct {
+	Utilisationblock Map
 }
 
 type ConsumerSummarySummary struct {
 	ElectoralRoll Map
 	PublicInfo    Map
+	CAIS          Map
+	CAPS          Map
 }

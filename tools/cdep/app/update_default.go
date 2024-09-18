@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"path"
 	"strings"
@@ -21,9 +21,13 @@ import (
 func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChecks []string) error {
 	log.Info("getting latest commit hash")
 
-	latestHash, err := git.GetLatestCommitHash(ctx, req.Branch)
-	if err != nil {
-		return err
+	if req.Commit == "" {
+		latestHash, err := git.GetLatestCommitHash(ctx, req.Branch)
+		if err != nil {
+			return err
+		}
+
+		req.Commit = latestHash
 	}
 
 	repoPath, err := paths.GetConfigRepo()
@@ -33,7 +37,7 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 
 	log.Info("fetching config repo")
 
-	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "fetch", "--all").Output(); err != nil {
+	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "fetch", "--all").CombinedOutput(); err != nil {
 		fmt.Println(string(out))
 		return err
 	}
@@ -64,7 +68,7 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 
 	log.Info("pulling config repo from remote")
 
-	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "pull", "origin", cdep.DefaultBranch).Output(); err != nil {
+	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "pull", "origin", cdep.DefaultBranch).CombinedOutput(); err != nil {
 		fmt.Println(string(out))
 		return err
 	}
@@ -101,7 +105,7 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 
 	for env, paths := range loadedPaths {
 		for _, p := range paths {
-			files, err := ioutil.ReadDir(p)
+			files, err := os.ReadDir(p)
 			if err != nil {
 				return err
 			}
@@ -114,8 +118,8 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 				fullPath := path.Join(p, file.Name())
 				var changed bool
 
-				if strings.Contains(fullPath, "_base.json") {
-					changed, err = a.AddToConfig(fullPath, req.Branch, latestHash)
+				if strings.HasSuffix(fullPath, "_base.json") || strings.HasSuffix(fullPath, ".yaml") {
+					changed, err = a.AddToConfig(fullPath, req.Branch, req.Commit)
 					if err != nil {
 						return err
 					}
@@ -170,7 +174,7 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 
 	log.Info("pushing commit to config repo")
 
-	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "push", "origin", cdep.DefaultBranch).Output(); err != nil {
+	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "push", "origin", cdep.DefaultBranch).CombinedOutput(); err != nil {
 		fmt.Println(string(out))
 		return err
 	}

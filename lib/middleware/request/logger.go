@@ -91,17 +91,27 @@ func Logger(log *logrus.Entry) func(http.Handler) http.Handler {
 
 			logger := clog.Get(r.Context())
 
-			logger.Log(determineLevel(logger), "request")
+			err := getError(logger)
+			logger.Log(determineLevel(err, clog.TimeoutsAsErrors(r.Context())), "request")
 		})
 	}
 }
 
-// determineLevel returns a suggested logrus Level type based on contents of any error in the log entry data
-func determineLevel(l *logrus.Entry) logrus.Level {
+// getError returns the error if one is set on the log entry
+func getError(l *logrus.Entry) error {
 	if erri, ok := l.Data[logrus.ErrorKey]; ok {
 		if err, ok := erri.(error); ok {
-			return clog.DetermineLevel(err)
+			return err
 		}
+	}
+
+	return nil
+}
+
+// determineLevel returns a suggested logrus Level type based whether an error is present and what type
+func determineLevel(err error, timeoutsAsErrors bool) logrus.Level {
+	if err != nil {
+		return clog.DetermineLevel(err, timeoutsAsErrors)
 	}
 
 	// no error, default to info level

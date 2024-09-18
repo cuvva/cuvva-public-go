@@ -3,6 +3,7 @@ package git
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/paths"
@@ -35,7 +36,10 @@ func GetLatestCommitHash(ctx context.Context, branchName string) (string, error)
 		}
 	}
 
-	refs, err := remote.List(&gogit.ListOptions{})
+	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
+	defer cancel()
+
+	refs, err := remote.ListContext(ctx, &gogit.ListOptions{})
 	if err != nil {
 		return "", err
 	}

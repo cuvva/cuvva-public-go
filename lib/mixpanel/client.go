@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -58,7 +58,7 @@ func (c Client) Export(ctx context.Context, fromDate, toDate time.Time) (ers *Ex
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return nil, cher.New(cher.Unknown, cher.M{"error": err})
 		}

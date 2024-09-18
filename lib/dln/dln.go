@@ -6,6 +6,9 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 var ErrInvalidInput = errors.New("invalid input")
@@ -119,7 +122,7 @@ func generateSectionC(personalName string, includeMiddleName bool) string {
 }
 
 func parseSectionA(a string) string {
-	familyName := strings.Title(strings.ToLower(a))
+	familyName := cases.Title(language.BritishEnglish).String(strings.ToLower(a))
 
 	return strings.Replace(familyName, "9", "", 4)
 }

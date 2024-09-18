@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -65,7 +64,12 @@ func NewClient(baseURL string, c *http.Client) *Client {
 }
 
 // Do executes an HTTP request against the configured server.
-func (c *Client) Do(ctx context.Context, method, path string, params url.Values, src, dst interface{}) error {
+func (c *Client) Do(ctx context.Context, method, path string, params url.Values, src, dst interface{}, requestModifiers ...func(r *http.Request)) error {
+	return c.DoWithHeaders(ctx, method, path, nil, params, src, dst, requestModifiers...)
+}
+
+// DoWithHeaders executes an HTTP request against the configured server with custom headers.
+func (c *Client) DoWithHeaders(ctx context.Context, method, path string, headers http.Header, params url.Values, src, dst interface{}, requestModifiers ...func(r *http.Request)) error {
 	if c.Client == nil {
 		c.Client = http.DefaultClient
 	}
@@ -76,12 +80,13 @@ func (c *Client) Do(ctx context.Context, method, path string, params url.Values,
 
 	ctx, requestID := request.GetOrSetRequestID(ctx)
 
+	fullPath := pathlib.Join(c.Prefix, path)
 	req := &http.Request{
 		Method: method,
 		URL: &url.URL{
 			Scheme: c.Scheme,
 			Host:   c.Host,
-			Path:   pathlib.Join(c.Prefix, path),
+			Path:   fullPath,
 		},
 		Header: http.Header{
 			"Accept":     []string{"application/json"},
@@ -95,6 +100,14 @@ func (c *Client) Do(ctx context.Context, method, path string, params url.Values,
 		req.URL.RawQuery = params.Encode()
 	}
 
+	for key, value := range headers {
+		req.Header[key] = value
+	}
+
+	for _, modifier := range requestModifiers {
+		modifier(req)
+	}
+
 	err := c.setRequestBody(req, src)
 	if err != nil {
 		return &ClientRequestError{"could not marshal", err}
@@ -104,7 +117,7 @@ func (c *Client) Do(ctx context.Context, method, path string, params url.Values,
 	if err != nil {
 		if netErr, ok := err.(net.Error); ok {
 			if netErr.Timeout() {
-				return cher.New(cher.RequestTimeout, cher.M{"method": method, "path": path, "host": c.Host, "scheme": c.Scheme})
+				return cher.New(cher.RequestTimeout, cher.M{"method": method, "path": fullPath, "host": c.Host, "scheme": c.Scheme, "timeout_error": netErr})
 			}
 
 			return &ClientTransportError{method, path, "request failed", netErr}
@@ -127,7 +140,7 @@ func (c *Client) setRequestBody(req *http.Request, src interface{}) error {
 			return err
 		}
 
-		req.Body = ioutil.NopCloser(&buf)
+		req.Body = io.NopCloser(&buf)
 		req.ContentLength = int64(buf.Len())
 
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
@@ -156,7 +169,7 @@ func (c *Client) handleResponse(res *http.Response, method, path string, dst int
 		return nil
 	}
 
-	resBody, err := ioutil.ReadAll(res.Body)
+	resBody, err := io.ReadAll(res.Body)
 	if err != nil {
 		return &ClientTransportError{method, path, "could not read response body stream", err}
 	}

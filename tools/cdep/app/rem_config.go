@@ -3,7 +3,6 @@ package app
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
@@ -20,7 +19,7 @@ func (a App) RemFromConfig(path string) (bool, error) {
 		return false, nil
 	}
 
-	blob, err := ioutil.ReadFile(path)
+	blob, err := os.ReadFile(path)
 	if err != nil {
 		if v, ok := err.(*os.PathError); ok {
 			if v.Op != "open" {
@@ -53,7 +52,7 @@ func (a App) RemFromConfig(path string) (bool, error) {
 		blob = attemptRemove(blob, branchRegRem)
 	}
 
-	return !bytes.Equal(original, blob), ioutil.WriteFile(path, blob, os.ModePerm)
+	return !bytes.Equal(original, blob), os.WriteFile(path, blob, os.ModePerm)
 }
 
 func getBranchDefinition(blob []byte) string {

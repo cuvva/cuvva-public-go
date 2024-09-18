@@ -1,10 +1,13 @@
 package app
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/PagerDuty/go-pagerduty"
+	log "github.com/sirupsen/logrus"
 )
 
 // PDShift is a PagerDuty representation of an on-call shift
@@ -15,15 +18,24 @@ type PDShift struct {
 }
 
 // ListPagerDutyShifts returns a slice of shifts pagerduty is tracking for a schedule
-func (a *App) ListPagerDutyShifts(scheduleID string, start, end time.Time) ([]*PDShift, interface{}, error) {
+func (a *App) ListPagerDutyShifts(scheduleIDs []string, start, end time.Time) ([]*PDShift, interface{}, error) {
 	var shifts []*PDShift
 
-	res, err := a.pagerduty.ListOnCalls(pagerduty.ListOnCallOptions{
+	fmt.Println("Requesting on call dates for ", start.Format(time.RFC3339), " until ", end.Format(time.RFC3339))
+
+	// @TODO context should be injected from the cobra entry point
+	res, err := a.pagerduty.ListOnCallsWithContext(context.Background(), pagerduty.ListOnCallOptions{
 		Includes:    []string{"users"},
-		ScheduleIDs: []string{scheduleID},
+		ScheduleIDs: scheduleIDs,
 		Since:       start.Format(time.RFC3339),
 		Until:       end.Format(time.RFC3339),
+		Limit:       100, // TODO implement pagination if we require more values
 	})
+
+	if res.More {
+		return nil, nil, errors.New("Pagination is required")
+	}
+
 	if err != nil {
 		return nil, res, err
 	}
@@ -38,8 +50,11 @@ func (a *App) ListPagerDutyShifts(scheduleID string, start, end time.Time) ([]*P
 
 		// if you weren't on the shift for at least 1 hour, we're skipping you
 		if end.Sub(start).Seconds() < (60 * time.Minute).Seconds() {
+			fmt.Println("Skipping short shift for [ ", pgShift.User.Email, " ] as duration was ", end.Sub(start).Minutes(), " minutes on ", pgShift.Start)
 			continue
 		}
+
+		log.Infof("Email %+v\nStart %+v End %+v\n", pgShift.User.Email, start, end)
 
 		shifts = append(shifts, &PDShift{
 			Email: pgShift.User.Email,

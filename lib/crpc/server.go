@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/xeipuuv/gojsonschema"
@@ -184,6 +185,10 @@ func Wrap(fn interface{}) (*WrappedFunc, error) {
 			enc.SetEscapeHTML(false)
 			err := enc.Encode(res[0].Interface())
 			if err != nil {
+				if strings.Contains(err.Error(), "broken pipe") {
+					return nil
+				}
+
 				return err
 			}
 		}

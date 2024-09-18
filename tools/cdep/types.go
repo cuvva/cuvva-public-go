@@ -11,6 +11,7 @@ var Types = map[string]struct{}{
 	"lambdas":  {},
 	"service":  {},
 	"services": {},
+	"terra":    {},
 }
 
 func ParseTypeArg(in string) (string, error) {
@@ -26,6 +27,8 @@ func ParseTypeArg(in string) (string, error) {
 		return "service", nil
 	case "lambda", "lambdas":
 		return "lambda", nil
+	case "terra":
+		return "terra", nil
 	default:
 		return "", cher.New("impossible", nil)
 	}

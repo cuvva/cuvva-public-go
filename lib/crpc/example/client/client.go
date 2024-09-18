@@ -30,7 +30,7 @@ func main() {
 	}
 
 	var ec example.Service = &ExampleClient{
-		Client: crpc.NewClient("http://127.0.0.1:3000/v1", client),
+		Client: crpc.NewClient(context.Background(), "http://127.0.0.1:3000/v1", client),
 	}
 
 	ctx := context.Background()

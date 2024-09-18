@@ -14,7 +14,7 @@ type Envelope struct {
 type Header struct {
 	XMLName xml.Name `json:"-" xml:"http://schemas.xmlsoap.org/soap/envelope/ Header"`
 
-	Content interface{}
+	Content interface{} `xml:",any"`
 }
 
 type Body struct {
@@ -22,7 +22,7 @@ type Body struct {
 
 	Fault *Fault
 
-	Content interface{}
+	Content interface{} `xml:",any"`
 }
 
 type Fault struct {

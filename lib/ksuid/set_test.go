@@ -1,6 +1,7 @@
 package ksuid
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,8 +13,8 @@ func TestSetIterator(t *testing.T) {
 		Set  []ID
 	}{
 		{"Empty", []ID{}},
-		{"Single", []ID{Generate("example")}},
-		{"Multiple", []ID{Generate("example"), Generate("example")}},
+		{"Single", []ID{Generate(context.Background(), "example")}},
+		{"Multiple", []ID{Generate(context.Background(), "example"), Generate(context.Background(), "example")}},
 	}
 
 	for _, test := range tests {

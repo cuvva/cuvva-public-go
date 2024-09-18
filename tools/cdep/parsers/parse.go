@@ -11,9 +11,10 @@ import (
 // exceptions of services that start with "service-"
 var exceptions = map[string]struct{}{
 	"web-underwriter": {},
+	"web-mid":         {},
 }
 
-func Parse(args []string, branch string, prodSys bool, message string) (*Params, error) {
+func Parse(args []string, prodSys bool) (*Params, error) {
 	if len(args) < 2 {
 		return nil, errors.New("missing arguments")
 	}
@@ -64,8 +65,6 @@ func Parse(args []string, branch string, prodSys bool, message string) (*Params,
 		Type:        t,
 		System:      system,
 		Environment: args[1],
-		Branch:      branch,
 		Items:       itemSet,
-		Message:     message,
 	}, nil
 }
