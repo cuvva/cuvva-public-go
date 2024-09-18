@@ -110,6 +110,30 @@ func TestRequestBody(t *testing.T) {
 	assert.True(t, gock.IsDone())
 }
 
+func TestRequestModifier(t *testing.T) {
+	defer gock.Off()
+
+	testJSON := map[string]bool{"testing": true}
+
+	modifier := func(req *http.Request) {
+		req.Header.Add("X-Test-Header", "test")
+	}
+
+	gock.New("http://coo.va/").
+		Post("/test").
+		MatchType("application/json; charset=utf-8").
+		JSON(testJSON).
+		MatchHeader("X-Test-Header", "test").
+		Reply(http.StatusNoContent)
+
+	client := NewClient("http://coo.va/", nil)
+	gock.InterceptClient(client.Client)
+
+	err := client.Do(context.Background(), "POST", "test", nil, testJSON, nil, modifier)
+	assert.Nil(t, err)
+	assert.True(t, gock.IsDone())
+}
+
 func TestResponseBody(t *testing.T) {
 	defer gock.Off()
 
