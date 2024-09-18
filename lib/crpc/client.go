@@ -42,8 +42,8 @@ func (c *Client) WithUASuffix(suffix string) *Client {
 }
 
 // Do executes an RPC request against the configured server.
-func (c *Client) Do(ctx context.Context, method, version string, src, dst interface{}) error {
-	err := c.Client.Do(ctx, "POST", path.Join(version, method), nil, src, dst)
+func (c *Client) Do(ctx context.Context, method, version string, src, dst interface{}, requestModifiers ...func(r *http.Request)) error {
+	err := c.Client.Do(ctx, "POST", path.Join(version, method), nil, src, dst, requestModifiers...)
 
 	if err == nil {
 		return nil
