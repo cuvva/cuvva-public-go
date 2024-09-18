@@ -45,6 +45,10 @@ func TestAWS_SessionV2_Static(t *testing.T) {
 	cfg, err := a.SessionV2(context.Background())
 	require.NoError(t, err)
 
+	credentials, err := cfg.Credentials.Retrieve(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, "static", credentials.Source)
+
 	client2 := sts.NewFromConfig(cfg)
 	_, err = client2.GetCallerIdentity(context.Background(), &sts.GetCallerIdentityInput{})
 	require.NoError(t, err)

@@ -38,7 +38,7 @@ func (a AWS) Session() (*session.Session, error) {
 }
 
 func (a AWS) SessionV2(ctx context.Context) (aws2.Config, error) {
-	opts := []config.LoadOptionsFunc{
+	opts := []func(*config.LoadOptions) error{
 		config.WithRegion(a.Region),
 	}
 
@@ -48,6 +48,7 @@ func (a AWS) SessionV2(ctx context.Context) (aws2.Config, error) {
 
 	cfg, err := config.LoadDefaultConfig(
 		ctx,
+		opts...,
 	)
 	if err != nil {
 		return aws2.Config{}, errors.Wrap(err, "aws v2 config")
