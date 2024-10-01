@@ -49,7 +49,8 @@ func (a AWS) SessionV2(ctx context.Context) (aws2.Config, error) {
 				a.AccessKeyID,
 				a.AccessKeySecret,
 				"",
-			)))
+			)),
+		)
 	}
 
 	cfg, err := config.LoadDefaultConfig(
