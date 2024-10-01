@@ -5,6 +5,7 @@ import (
 
 	aws2 "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	credentials2 "github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -43,7 +44,12 @@ func (a AWS) SessionV2(ctx context.Context) (aws2.Config, error) {
 	}
 
 	if a.AccessKeyID != "" {
-		opts = append(opts, config.WithCredentialsProvider(a))
+		opts = append(opts, config.WithCredentialsProvider(
+			credentials2.NewStaticCredentialsProvider(
+				a.AccessKeyID,
+				a.AccessKeySecret,
+				"",
+			)))
 	}
 
 	cfg, err := config.LoadDefaultConfig(
@@ -55,14 +61,4 @@ func (a AWS) SessionV2(ctx context.Context) (aws2.Config, error) {
 	}
 
 	return cfg, nil
-}
-
-func (a AWS) Retrieve(ctx context.Context) (aws2.Credentials, error) {
-	return aws2.Credentials{
-		AccessKeyID:     a.AccessKeyID,
-		SecretAccessKey: a.AccessKeySecret,
-		Source:          "static",
-		CanExpire:       false,
-		AccountID:       "",
-	}, nil
 }
