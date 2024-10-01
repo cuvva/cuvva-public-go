@@ -1,9 +1,15 @@
 package config
 
 import (
+	"context"
+
+	aws2 "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	credentials2 "github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/pkg/errors"
 )
 
 // AWS configures credentials for access to Amazon Web Services.
@@ -30,4 +36,30 @@ func (a AWS) Session() (*session.Session, error) {
 		Region:      aws.String(a.Region),
 		Credentials: a.Credentials(),
 	})
+}
+
+func (a AWS) SessionV2(ctx context.Context) (aws2.Config, error) {
+	opts := []func(*config.LoadOptions) error{
+		config.WithRegion(a.Region),
+	}
+
+	if a.AccessKeyID != "" {
+		opts = append(opts, config.WithCredentialsProvider(
+			credentials2.NewStaticCredentialsProvider(
+				a.AccessKeyID,
+				a.AccessKeySecret,
+				"",
+			)),
+		)
+	}
+
+	cfg, err := config.LoadDefaultConfig(
+		ctx,
+		opts...,
+	)
+	if err != nil {
+		return aws2.Config{}, errors.Wrap(err, "aws v2 config")
+	}
+
+	return cfg, nil
 }
