@@ -23,6 +23,7 @@ func init() {
 	UpdateDefaultCmd.Flags().BoolP("dry-run", "", false, "Dry run only?")
 	UpdateDefaultCmd.Flags().StringSliceP("overrule-checks", "", []string{}, "Overrule checks the tool does")
 	UpdateDefaultCmd.Flags().StringP("message", "m", "", "More details about the deployment")
+	UpdateDefaultCmd.Flags().StringP("commit", "c", "", "Commit hash to use")
 
 	UpdateDefaultCmd.Flags().MarkHidden("overrule-checks")
 
