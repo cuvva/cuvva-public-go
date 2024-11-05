@@ -1,17 +1,6 @@
 # https://golangci-lint.run/usage/configuration/#config-file
-
-run:
-  deadline: 5m
-  skip-dirs:
-    - genfiles$
-    - vendor$
-  skip-files:
-    - ".*\\.pb\\.go"
-    - ".*\\.gen\\.go"
-
 linters-settings:
   govet:
-    check-shadowing: false
     disable:
       - composites
 
@@ -21,17 +10,12 @@ linters:
     - bodyclose
     - goconst
     - goimports
-    - interfacer
     - unconvert
     - unparam
   disable:
     - errcheck
 
 issues:
-  exclude:
-    - ".*_test.go:\\d+:\\d+: string `.+` has \\d+ occurrences, make it a constant" # exclude goconst issues for tests
-    - "should not use dot imports" # exclude for component tests
-  max-per-linter: 0
   max-same-issues: 0
 
   exclude-rules:
