@@ -30,3 +30,22 @@ func TestFallbackReverseGeocode(t *testing.T) {
 		t.Error(errors.New("no response when one expected"))
 	}
 }
+
+func TestFailoverClient_Geocode(t *testing.T) {
+	std := postcodesio.New(postcodesio.DefaultBaseURL + "breakthisurl")
+	fallback := postcodesio.New(postcodesio.DefaultBaseURL)
+
+	fallbackClient, err := postcodesio.NewFailoverClient(std, fallback)
+	if err != nil {
+		t.Error(err)
+	}
+
+	pc, err := fallbackClient.Geocode(context.Background(), "N1 1AA")
+	if err != nil {
+		t.Error(err)
+	}
+
+	if pc == nil {
+		t.Error(errors.New("no response when one expected"))
+	}
+}
