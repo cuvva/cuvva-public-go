@@ -13,6 +13,7 @@ type responseWriter struct {
 
 	Status int
 	Bytes  int64
+	Raw    []byte
 }
 
 func (rw *responseWriter) WriteHeader(code int) {
@@ -29,6 +30,7 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	}
 
 	rw.Bytes += int64(len(b))
+	rw.Raw = append(rw.Raw, b...)
 
 	return rw.ResponseWriter.Write(b)
 }
@@ -63,6 +65,10 @@ func Logger(log *logrus.Entry) func(http.Handler) http.Handler {
 			// panics inside handlers will be logged to standard before propagation
 			defer clog.HandlePanic(r.Context(), true)
 
+			body, _ := r.GetBody()
+			var b []byte
+			_, _ = body.Read(b)
+
 			clog.SetFields(r.Context(), clog.Fields{
 				"request_id": requestID,
 
@@ -73,6 +79,7 @@ func Logger(log *logrus.Entry) func(http.Handler) http.Handler {
 				"http_method":         r.Method,
 				"http_proto":          r.Proto,
 				"http_referer":        r.Referer(),
+				"raw_request":         string(b),
 			})
 
 			// wrap given response writer with one that tracks status code/bytes written
@@ -87,6 +94,7 @@ func Logger(log *logrus.Entry) func(http.Handler) http.Handler {
 				"http_duration_us":    int64(t2.Sub(t1) / time.Microsecond),
 				"http_status":         rw.Status,
 				"http_response_bytes": rw.Bytes,
+				"raw_response":        string(rw.Raw),
 			})
 
 			logger := clog.Get(r.Context())
