@@ -1,6 +1,8 @@
 package request
 
 import (
+	"bytes"
+	"io"
 	"net/http"
 	"time"
 
@@ -65,9 +67,11 @@ func Logger(log *logrus.Entry) func(http.Handler) http.Handler {
 			// panics inside handlers will be logged to standard before propagation
 			defer clog.HandlePanic(r.Context(), true)
 
-			body, _ := r.GetBody()
-			var b []byte
-			_, _ = body.Read(b)
+			// read the request body and log it but keep the body available for further reading
+			b, _ := io.ReadAll(r.Body)
+
+			// replace the request body with a new reader that reads from the stored bytes
+			r.Body = io.NopCloser(bytes.NewReader(b))
 
 			clog.SetFields(r.Context(), clog.Fields{
 				"request_id": requestID,
