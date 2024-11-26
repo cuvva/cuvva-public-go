@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"strings"
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/cuvva/cuvva-public-go/lib/slicecontains"
@@ -116,23 +115,10 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 				}
 
 				fullPath := path.Join(p, file.Name())
-				var changed bool
 
-				if strings.HasSuffix(fullPath, "_base.json") || strings.HasSuffix(fullPath, ".yaml") {
-					changed, err = a.AddToConfig(fullPath, req.Branch, req.Commit)
-					if err != nil {
-						return err
-					}
-				} else {
-					changed, err = a.RemFromConfig(fullPath)
-					if err != nil {
-						e := cher.Coerce(err)
-						if e.Code != "frozen" {
-							return err
-						}
-
-						log.Warn(fmt.Sprintf("skipping %s due to cdep freeze", file.Name()))
-					}
+				changed, err := a.AddToConfig(fullPath, req.Branch, req.Commit)
+				if err != nil {
+					return err
 				}
 
 				if changed {
