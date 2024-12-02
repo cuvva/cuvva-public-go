@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3.0.2
       - name: Run lint and report
-        uses: reviewdog/action-golangci-lint@v2.1
+        uses: reviewdog/action-golangci-lint@v2.2
         env:
           GOLANGCI_LINT_VERSION: "v1.50.0"
         with:
