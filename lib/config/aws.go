@@ -15,10 +15,10 @@ import (
 // AWS configures credentials for access to Amazon Web Services.
 // It is intended to be used in composition rather than a key.
 type AWS struct {
-	AccessKeyID     string `json:"access_key_id"`
-	AccessKeySecret string `json:"access_key_secret"`
+	AccessKeyID     string `json:"access_key_id" env:"AWS_ACCESS_KEY_ID"`
+	AccessKeySecret string `json:"access_key_secret" env:"AWS_SECRET_ACCESS_KEY"`
 
-	Region string `json:"region,omitempty"`
+	Region string `json:"region,omitempty" env:"AWS_REGION"`
 }
 
 // Credentials returns a configured set of AWS credentials.
