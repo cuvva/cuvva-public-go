@@ -46,7 +46,7 @@ type Config struct {
 	// Format configures the output format. Possible options:
 	//   - text - logrus default text output, good for local development
 	//   - json - fields and message encoded as json, good for storage in e.g. cloudwatch
-	Format string `json:"format" env:"FORMAT" envDefault:"json"`
+	Format string `json:"format" env:"LOG_FORMAT" envDefault:"json"`
 
 	// Debug enables debug level logging, otherwise INFO level
 	Debug bool `json:"debug" env:"DEBUG" envDefault:"false"`
