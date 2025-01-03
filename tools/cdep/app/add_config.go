@@ -15,6 +15,7 @@ var commitFreeze = regexp.MustCompile(`(?m)"cdep_freeze"\s*:\s*true`)
 
 var commitRegAdd = regexp.MustCompile(`"commit"\s*:\s*"[a-f\d]{40}"`)
 var branchRegAdd = regexp.MustCompile(`"branch"\s*:\s*"([^"]+)"`)
+var imageTagRegAdd = regexp.MustCompile(`"tag"\s*:\s*"([^"]+)"`)
 
 var commitRegAddYaml = regexp.MustCompile(`commit\s*:\s*"?[a-f\d]{40}"?`)
 var imageTagRegAddYaml = regexp.MustCompile(`tag\s*:\s*"?[a-z\d-]+"?`)
@@ -62,8 +63,14 @@ func (a App) doJsonUpdates(path string, branchName string, commitHash string, bl
 		return blob
 	}
 
+	imagePrefix := "master"
+	if branchName != "master" {
+		imagePrefix = "branch"
+	}
+
 	blob = attemptUpdate(blob, commitRegAdd, "commit", commitHash)
 	blob = attemptUpdate(blob, branchRegAdd, "branch", branchName)
+	blob = attemptUpdate(blob, imageTagRegAdd, "tag", fmt.Sprintf("%s-%s", imagePrefix, commitHash))
 
 	blob = attemptInsert(blob, "commit", commitHash)
 	blob = attemptInsert(blob, "branch", branchName)
@@ -84,9 +91,6 @@ func (a App) doYamlUpdates(path string, branchName string, commitHash string, bl
 	blob = attemptUpdateYaml(blob, commitRegAddYaml, "commit", commitHash)
 	blob = attemptUpdateYaml(blob, branchRegAddYaml, "branch", branchName)
 	blob = attemptUpdateYaml(blob, imageTagRegAddYaml, "tag", fmt.Sprintf("%s-%s", imagePrefix, commitHash))
-
-	blob = attemptInsertYaml(blob, "commit", commitHash)
-	blob = attemptInsertYaml(blob, "branch", branchName)
 	return blob
 }
 
