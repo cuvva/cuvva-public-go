@@ -109,20 +109,6 @@ func attemptInsert(blob []byte, key string, value interface{}) []byte {
 	return blob
 }
 
-// attemptInsertYaml attempts to insert a key into the struct if it doesn't exist
-func attemptInsertYaml(blob []byte, key string, value interface{}) []byte {
-	strBlob := string(blob)
-
-	// if it does not exist, add it
-	if pos := strings.Index(strBlob, key); pos == -1 {
-		strBlob = fmt.Sprintf("%s: %s\n", key, value) + strBlob
-	}
-
-	blob = []byte(strBlob)
-
-	return blob
-}
-
 // attemptUpdate attempts to change a value of a key if it already exists
 func attemptUpdate(blob []byte, reg *regexp.Regexp, key, value string) []byte {
 	if reg.Match(blob) {
