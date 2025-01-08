@@ -15,6 +15,7 @@ var commitFreeze = regexp.MustCompile(`(?m)"cdep_freeze"\s*:\s*true`)
 
 var commitRegAdd = regexp.MustCompile(`"commit"\s*:\s*"[a-f\d]{40}"`)
 var branchRegAdd = regexp.MustCompile(`"branch"\s*:\s*"([^"]+)"`)
+var imageTagRegAdd = regexp.MustCompile(`"tag"\s*:\s*"([^"]+)"`)
 
 var commitRegAddYaml = regexp.MustCompile(`commit\s*:\s*"?[a-f\d]{40}"?`)
 var imageTagRegAddYaml = regexp.MustCompile(`tag\s*:\s*"?[a-z\d-]+"?`)
@@ -62,8 +63,14 @@ func (a App) doJsonUpdates(path string, branchName string, commitHash string, bl
 		return blob
 	}
 
+	imagePrefix := "master"
+	if branchName != "master" {
+		imagePrefix = "branch"
+	}
+
 	blob = attemptUpdate(blob, commitRegAdd, "commit", commitHash)
 	blob = attemptUpdate(blob, branchRegAdd, "branch", branchName)
+	blob = attemptUpdate(blob, imageTagRegAdd, "tag", fmt.Sprintf("%s-%s", imagePrefix, commitHash))
 
 	blob = attemptInsert(blob, "commit", commitHash)
 	blob = attemptInsert(blob, "branch", branchName)
@@ -84,9 +91,6 @@ func (a App) doYamlUpdates(path string, branchName string, commitHash string, bl
 	blob = attemptUpdateYaml(blob, commitRegAddYaml, "commit", commitHash)
 	blob = attemptUpdateYaml(blob, branchRegAddYaml, "branch", branchName)
 	blob = attemptUpdateYaml(blob, imageTagRegAddYaml, "tag", fmt.Sprintf("%s-%s", imagePrefix, commitHash))
-
-	blob = attemptInsertYaml(blob, "commit", commitHash)
-	blob = attemptInsertYaml(blob, "branch", branchName)
 	return blob
 }
 
@@ -98,20 +102,6 @@ func attemptInsert(blob []byte, key string, value interface{}) []byte {
 	if pos := strings.Index(strBlob, key); pos == -1 {
 		idx := strings.Index(strBlob, "{")
 		strBlob = strBlob[:idx+1] + fmt.Sprintf("\n\t\"%s\": \"%s\",", key, value) + strBlob[idx+1:]
-	}
-
-	blob = []byte(strBlob)
-
-	return blob
-}
-
-// attemptInsertYaml attempts to insert a key into the struct if it doesn't exist
-func attemptInsertYaml(blob []byte, key string, value interface{}) []byte {
-	strBlob := string(blob)
-
-	// if it does not exist, add it
-	if pos := strings.Index(strBlob, key); pos == -1 {
-		strBlob = fmt.Sprintf("%s: %s\n", key, value) + strBlob
 	}
 
 	blob = []byte(strBlob)
