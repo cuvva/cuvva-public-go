@@ -109,7 +109,10 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 		return fmt.Errorf("load envs: %w", err)
 	}
 
+	var envNames []string
 	for env := range envs {
+		envNames = append(envNames, env)
+
 		switch req.Type {
 		case "service":
 			for _, service := range req.Items {
@@ -191,6 +194,10 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 	if err := a.PublishToSlack(ctx, req, commitMessage, updatedFiles, repoPath); err != nil {
 		return fmt.Errorf("publish to slack: %w", err)
 	}
+
+	dashboards := chooseDashboards(req, envNames)
+
+	printDashboards(dashboards)
 
 	if a.DryRun {
 		log.Info("Dry run only, stopping now")
