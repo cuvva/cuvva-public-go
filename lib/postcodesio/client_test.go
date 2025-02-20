@@ -3,10 +3,10 @@ package postcodesio_test
 import (
 	"context"
 	"errors"
-	"github.com/stretchr/testify/require"
 	"testing"
 
 	"github.com/cuvva/cuvva-public-go/lib/postcodesio"
+	"github.com/stretchr/testify/require"
 )
 
 // TestFallbackReverseGeocode tests if given two clients, the first of which
