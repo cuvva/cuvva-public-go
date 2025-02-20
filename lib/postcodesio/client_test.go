@@ -3,6 +3,7 @@ package postcodesio_test
 import (
 	"context"
 	"errors"
+	"github.com/stretchr/testify/require"
 	"testing"
 
 	"github.com/cuvva/cuvva-public-go/lib/postcodesio"
@@ -36,14 +37,10 @@ func TestFailoverClient_Geocode(t *testing.T) {
 	fallback := postcodesio.New(postcodesio.DefaultBaseURL)
 
 	fallbackClient, err := postcodesio.NewFailoverClient(std, fallback)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
 	pc, err := fallbackClient.Geocode(context.Background(), "N1 1AA")
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
 	if pc == nil {
 		t.Error(errors.New("no response when one expected"))

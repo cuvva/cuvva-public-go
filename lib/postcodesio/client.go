@@ -2,10 +2,12 @@ package postcodesio
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
@@ -16,8 +18,33 @@ import (
 // Postcode is struct to contain the postcode information given in the API response
 type Postcode struct {
 	Postcode  string  `json:"postcode"`
+	Area      string  `json:"area"`
 	Longitude float64 `json:"longitude"`
 	Latitude  float64 `json:"latitude"`
+}
+
+// UnmarshalJSON is a custom unmarshaler for the Postcode struct
+func (p *Postcode) UnmarshalJSON(data []byte) error {
+	type Alias Postcode
+	aux := &struct {
+		Area string `json:"parish"`
+		*Alias
+	}{
+		Alias: (*Alias)(p),
+	}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	area := aux.Area
+	if strings.Contains(area, ", unparished area") {
+		area = strings.Split(area, ", unparished area")[0]
+	}
+
+	p.Area = area
+
+	return nil
 }
 
 // DefaultUserAgent is the default user agent to use for the lib if no other
