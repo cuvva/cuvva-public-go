@@ -2,10 +2,10 @@ package postcodesio_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/cuvva/cuvva-public-go/lib/postcodesio"
+	"github.com/stretchr/testify/require"
 )
 
 // TestFallbackReverseGeocode tests if given two clients, the first of which
@@ -15,20 +15,17 @@ func TestFallbackReverseGeocode(t *testing.T) {
 	fallback := postcodesio.New(postcodesio.DefaultBaseURL)
 
 	fallbackClient, err := postcodesio.NewFailoverClient(std, fallback)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
 	pc, err := fallbackClient.ReverseGeocode(context.Background(), 51.532322, -0.105826)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
-	if pc == nil {
-		// NOTE(sn): Tests if a nil is returned by accident, this does test postcodes.io a little bit
-		// too much for my liking and can be removed if it causes issues.
-		t.Error(errors.New("no response when one expected"))
-	}
+	require.NotNil(t, pc, "no response when one expected")
+
+	require.Equal(t, "N1 9LQ", pc.Postcode)
+	require.Equal(t, "Islington", pc.Area) // this tests the custom unmarshaler
+	require.Equal(t, 51.53241, pc.Latitude)
+	require.Equal(t, -0.106501, pc.Longitude)
 }
 
 func TestFailoverClient_Geocode(t *testing.T) {
@@ -36,16 +33,15 @@ func TestFailoverClient_Geocode(t *testing.T) {
 	fallback := postcodesio.New(postcodesio.DefaultBaseURL)
 
 	fallbackClient, err := postcodesio.NewFailoverClient(std, fallback)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
 	pc, err := fallbackClient.Geocode(context.Background(), "N1 1AA")
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
-	if pc == nil {
-		t.Error(errors.New("no response when one expected"))
-	}
+	require.NotNil(t, pc, "no response when one expected")
+
+	require.Equal(t, "N1 1AA", pc.Postcode)
+	require.Equal(t, "Islington", pc.Area) // this tests the custom unmarshaler
+	require.Equal(t, 51.539746, pc.Latitude)
+	require.Equal(t, -0.103053, pc.Longitude)
 }
