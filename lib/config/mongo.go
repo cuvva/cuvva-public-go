@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/cuvva/cuvva-public-go/lib/db/mongodb"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readconcern"
-	"go.mongodb.org/mongo-driver/mongo/writeconcern"
-	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
+	"github.com/cuvva/cuvva-public-go/lib/ptr"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo/readconcern"
+	"go.mongodb.org/mongo-driver/v2/mongo/writeconcern"
+	"go.mongodb.org/mongo-driver/v2/x/mongo/driver/connstring"
 )
 
 // MongoDB configures a connection to a Mongo database.
@@ -29,6 +30,10 @@ func (m MongoDB) Options() (opts *options.ClientOptions, dbName string, err erro
 	opts.MaxConnecting = m.MaxConnecting
 	opts.MaxPoolSize = m.MaxPoolSize
 	opts.MinPoolSize = m.MinPoolSize
+	if m.ConnectTimeout == 0 {
+		m.ConnectTimeout = 10 * time.Second
+	}
+	opts.ConnectTimeout = ptr.Ptr(m.ConnectTimeout)
 
 	err = opts.Validate()
 	if err != nil {
@@ -38,7 +43,10 @@ func (m MongoDB) Options() (opts *options.ClientOptions, dbName string, err erro
 	// all Go services use majority reads/writes, and this is unlikely to change
 	// if it does change, switch to accepting as an argument
 	opts.SetReadConcern(readconcern.Majority())
-	opts.SetWriteConcern(writeconcern.New(writeconcern.WMajority(), writeconcern.J(true)))
+	opts.SetWriteConcern(&writeconcern.WriteConcern{
+		W:       writeconcern.WCMajority,
+		Journal: ptr.Bool(true),
+	})
 
 	cs, err := connstring.Parse(m.URI)
 	if err != nil {
@@ -60,14 +68,5 @@ func (m MongoDB) Connect() (*mongodb.Database, error) {
 		return nil, err
 	}
 
-	if m.ConnectTimeout == 0 {
-		m.ConnectTimeout = 10 * time.Second
-	}
-
-	// this package can only be used for service config
-	// so can only happen at init-time - no need to accept context input
-	ctx, cancel := context.WithTimeout(context.Background(), m.ConnectTimeout)
-	defer cancel()
-
-	return mongodb.Connect(ctx, opts, dbName)
+	return mongodb.Connect(opts, dbName)
 }

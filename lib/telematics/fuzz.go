@@ -1,7 +1,7 @@
 package telematics
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func Fuzz(data []byte) int {

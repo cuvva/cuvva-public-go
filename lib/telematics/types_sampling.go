@@ -5,8 +5,7 @@ import (
 	"errors"
 	"math"
 
-	"go.mongodb.org/mongo-driver/bson/bsonrw"
-	"go.mongodb.org/mongo-driver/bson/bsontype"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // sampling data is an efficient binary-packed format
@@ -41,7 +40,7 @@ const sampleSize = 4 // 4 bytes in a uint32
 type AccelerationData []Acceleration
 type AttitudeData []Attitude
 
-func (a *AccelerationData) UnmarshalBSONValue(t bsontype.Type, raw []byte) error {
+func (a *AccelerationData) UnmarshalBSONValue(t bson.Type, raw []byte) error {
 	count, data, err := prepSamplingData(t, raw)
 	if err != nil {
 		return err
@@ -64,7 +63,7 @@ func (a *AccelerationData) UnmarshalBSONValue(t bsontype.Type, raw []byte) error
 	return nil
 }
 
-func (a *AttitudeData) UnmarshalBSONValue(t bsontype.Type, raw []byte) error {
+func (a *AttitudeData) UnmarshalBSONValue(t bson.Type, raw []byte) error {
 	count, data, err := prepSamplingData(t, raw)
 	if err != nil {
 		return err
@@ -87,8 +86,8 @@ func (a *AttitudeData) UnmarshalBSONValue(t bsontype.Type, raw []byte) error {
 	return nil
 }
 
-func prepSamplingData(t bsontype.Type, raw []byte) (count int, data []byte, err error) {
-	data, _, err = bsonrw.NewBSONValueReader(t, raw).ReadBinary()
+func prepSamplingData(t bson.Type, raw []byte) (count int, data []byte, err error) {
+	err = bson.UnmarshalValue(t, raw, &data)
 	if err != nil {
 		return
 	}
