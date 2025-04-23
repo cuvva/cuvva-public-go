@@ -21,6 +21,8 @@ var commitRegAddYaml = regexp.MustCompile(`commit\s*:\s*"?[a-f\d]{40}"?`)
 var imageTagRegAddYaml = regexp.MustCompile(`tag\s*:\s*"?[a-z\d-]+"?`)
 var branchRegAddYaml = regexp.MustCompile(`branch\s*:\s*"?([a-zA-Z\d-._]+)"?`)
 
+var jsonExtraCommaCheck = regexp.MustCompile(`,\s*}`)
+
 func (a App) AddToConfig(path, branchName, commitHash string) (bool, error) {
 	blob, err := os.ReadFile(path)
 	if err != nil {
@@ -102,6 +104,10 @@ func attemptInsert(blob []byte, key string, value interface{}) []byte {
 	if pos := strings.Index(strBlob, key); pos == -1 {
 		idx := strings.Index(strBlob, "{")
 		strBlob = strBlob[:idx+1] + fmt.Sprintf("\n\t\"%s\": \"%s\",", key, value) + strBlob[idx+1:]
+
+		if jsonExtraCommaCheck.MatchString(strBlob) {
+			strBlob = jsonExtraCommaCheck.ReplaceAllString(strBlob, "\n}")
+		}
 	}
 
 	blob = []byte(strBlob)
