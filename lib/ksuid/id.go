@@ -8,8 +8,6 @@ import (
 
 	"github.com/jamescun/basex"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/bson/bsonrw"
-	"go.mongodb.org/mongo-driver/v2/bson/bsontype"
 )
 
 // ID is an optionally prefixed, k-sortable globally unique ID.

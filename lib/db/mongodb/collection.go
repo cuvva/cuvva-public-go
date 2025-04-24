@@ -29,14 +29,14 @@ func (c Collection) FindAll(ctx context.Context, filter, results interface{}, op
 	return
 }
 
-func (c Collection) DistinctString(ctx context.Context, fieldName string, filter interface{}, opts ...*options.DistinctOptions) ([]string, error) {
+func (c Collection) DistinctString(ctx context.Context, fieldName string, filter interface{}, opts *options.DistinctOptionsBuilder) ([]string, error) {
 	pipeline := []bson.M{
 		{"$match": filter},
 		{"$group": bson.M{"_id": nil, "set": bson.M{"$addToSet": "$" + fieldName}}},
 	}
 
-	dOpts := options.MergeDistinctOptions(opts...)
-	aOpts := &options.AggregateOptions{
+	dOpts := opts.()
+	aOpts := options.Aggregate().SetCollation(dOpts){
 		Collation: dOpts.Collation,
 		MaxTime:   dOpts.MaxTime,
 	}

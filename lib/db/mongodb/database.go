@@ -16,8 +16,8 @@ type Database struct {
 	*mongo.Database
 }
 
-func (d Database) Collection(name string, opts ...*options.CollectionOptions) *Collection {
-	return &Collection{d.Database.Collection(name, opts...)}
+func (d Database) Collection(name string, opts options.Lister[options.CollectionOptions]) *Collection {
+	return &Collection{d.Database.Collection(name, opts)}
 }
 
 func (d Database) SetupSchemas(ctx context.Context, fs fs.FS, collectionNames []string) error {
@@ -52,15 +52,14 @@ func (d Database) SetupSchemas(ctx context.Context, fs fs.FS, collectionNames []
 	return nil
 }
 
-func (db *Database) DoTx(ctx context.Context, fn func(ctx mongo.SessionContext) error) error {
+func (db *Database) DoTx(ctx context.Context, fn func(ctx context.Context) error) error {
 	return db.DoTxWithOptions(ctx, options.Session(), fn)
 }
 
-func (db *Database) DoTxWithOptions(ctx context.Context, opts *options.SessionOptions, fn func(ctx mongo.SessionContext) error) error {
-	return db.Client().UseSessionWithOptions(ctx, opts, func(ctx mongo.SessionContext) error {
-		_, err := ctx.WithTransaction(ctx, func(ctx mongo.SessionContext) (interface{}, error) {
-			return nil, fn(ctx)
+func (db *Database) DoTxWithOptions(ctx context.Context, opts *options.SessionOptionsBuilder, fn func(ctx context.Context) error) error {
+	return db.Client().UseSessionWithOptions(ctx, opts, func(ctx context.Context) error {
+		return mongo.WithSession(ctx, mongo.SessionFromContext(ctx), func(ctx context.Context) error {
+			return fn(ctx)
 		})
-		return err
 	})
 }
