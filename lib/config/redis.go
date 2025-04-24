@@ -28,7 +28,7 @@ func (r Redis) Options() (*redis.Options, error) {
 	return opts, nil
 }
 
-// Connect returns a connected redis.Client instance.
+// Connect returns a redis.Client instance that will attempt to connect when first used.
 func (r Redis) Connect() (*redis.Client, error) {
 	opts, err := r.Options()
 	if err != nil {
@@ -36,10 +36,6 @@ func (r Redis) Connect() (*redis.Client, error) {
 	}
 
 	client := redis.NewClient(opts)
-
-	if err := client.Ping().Err(); err != nil {
-		return client, err
-	}
 
 	return client, nil
 }
