@@ -166,3 +166,41 @@ func TestDetermineLevel(t *testing.T) {
 		})
 	}
 }
+
+func TestWithCherFields(t *testing.T) {
+	t.Run("With cher.E containing reasons and meta", func(t *testing.T) {
+		entry := logrus.NewEntry(logrus.New())
+		err := cher.E{
+			Code:    "test_error",
+			Reasons: []cher.E{{Code: "reason_1"}, {Code: "reason_2"}},
+			Meta:    map[string]interface{}{"key": "value"},
+		}
+
+		result := WithCherFields(entry, err)
+
+		assert.Equal(t, []cher.E{{Code: "reason_1"}, {Code: "reason_2"}}, result.Data["error_reasons"])
+		assert.Equal(t, map[string]interface{}{"key": "value"}, result.Data["error_meta"])
+	})
+
+	t.Run("With cher.E containing no reasons or meta", func(t *testing.T) {
+		entry := logrus.NewEntry(logrus.New())
+		err := cher.E{
+			Code: "test_error",
+		}
+
+		result := WithCherFields(entry, err)
+
+		assert.NotContains(t, result.Data, "error_reasons")
+		assert.NotContains(t, result.Data, "error_meta")
+	})
+
+	t.Run("With non-cher error", func(t *testing.T) {
+		entry := logrus.NewEntry(logrus.New())
+		err := errors.New("non-cher error")
+
+		result := WithCherFields(entry, err)
+
+		assert.NotContains(t, result.Data, "error_reasons")
+		assert.NotContains(t, result.Data, "error_meta")
+	})
+}
