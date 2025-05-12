@@ -168,39 +168,51 @@ func TestDetermineLevel(t *testing.T) {
 }
 
 func TestWithCherFields(t *testing.T) {
-	t.Run("With cher.E containing reasons and meta", func(t *testing.T) {
-		entry := logrus.NewEntry(logrus.New())
-		err := cher.E{
-			Code:    "test_error",
-			Reasons: []cher.E{{Code: "reason_1"}, {Code: "reason_2"}},
-			Meta:    map[string]interface{}{"key": "value"},
-		}
+	type testCase struct {
+		name     string
+		err      error
+		expected map[string]any
+	}
 
-		result := WithCherFields(entry, err)
+	tests := []testCase{
+		{
+			name: "With cher.E containing reasons and meta",
+			err: cher.E{
+				Code:    "test_error",
+				Reasons: []cher.E{{Code: "reason_1"}, {Code: "reason_2"}},
+				Meta:    cher.M{"key": "value"},
+			},
+			expected: map[string]any{
+				"error_reasons": []cher.E{{Code: "reason_1"}, {Code: "reason_2"}},
+				"error_meta":    cher.M{"key": "value"},
+			},
+		},
+		{
+			name:     "With cher.E containing no reasons or meta",
+			err:      cher.New("test_error", nil),
+			expected: map[string]any{},
+		},
+		{
+			name:     "With non-cher error",
+			err:      errors.New("non-cher error"),
+			expected: map[string]any{},
+		},
+	}
 
-		assert.Equal(t, []cher.E{{Code: "reason_1"}, {Code: "reason_2"}}, result.Data["error_reasons"])
-		assert.Equal(t, map[string]interface{}{"key": "value"}, result.Data["error_meta"])
-	})
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			entry := logrus.NewEntry(logrus.New())
+			result := WithCherFields(entry, tc.err)
 
-	t.Run("With cher.E containing no reasons or meta", func(t *testing.T) {
-		entry := logrus.NewEntry(logrus.New())
-		err := cher.E{
-			Code: "test_error",
-		}
+			for key, value := range tc.expected {
+				assert.Equal(t, value, result.Data[key])
+			}
 
-		result := WithCherFields(entry, err)
-
-		assert.NotContains(t, result.Data, "error_reasons")
-		assert.NotContains(t, result.Data, "error_meta")
-	})
-
-	t.Run("With non-cher error", func(t *testing.T) {
-		entry := logrus.NewEntry(logrus.New())
-		err := errors.New("non-cher error")
-
-		result := WithCherFields(entry, err)
-
-		assert.NotContains(t, result.Data, "error_reasons")
-		assert.NotContains(t, result.Data, "error_meta")
-	})
+			for key := range result.Data {
+				if _, ok := tc.expected[key]; !ok {
+					assert.NotContains(t, result.Data, key)
+				}
+			}
+		})
+	}
 }
