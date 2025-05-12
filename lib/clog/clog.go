@@ -212,6 +212,21 @@ func SetError(ctx context.Context, err error) error {
 	return nil
 }
 
+func WithCherFields(entry *logrus.Entry, err error) *logrus.Entry {
+	cherErr := cher.E{}
+	if errors.As(err, &cherErr) {
+		if len(cherErr.Reasons) > 0 {
+			entry = entry.WithField("error_reasons", cherErr.Reasons)
+		}
+
+		if cherErr.Meta != nil {
+			entry = entry.WithField("error_meta", cherErr.Meta)
+		}
+	}
+
+	return entry
+}
+
 // ConfigureTimeoutsAsErrors changes to default behaviour of logging timeouts as info, to log them as errors
 func ConfigureTimeoutsAsErrors(ctx context.Context) {
 	ctxLogger := getContextLogger(ctx)

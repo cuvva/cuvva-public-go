@@ -166,3 +166,53 @@ func TestDetermineLevel(t *testing.T) {
 		})
 	}
 }
+
+func TestWithCherFields(t *testing.T) {
+	type testCase struct {
+		name     string
+		err      error
+		expected map[string]any
+	}
+
+	tests := []testCase{
+		{
+			name: "With cher.E containing reasons and meta",
+			err: cher.E{
+				Code:    "test_error",
+				Reasons: []cher.E{{Code: "reason_1"}, {Code: "reason_2"}},
+				Meta:    cher.M{"key": "value"},
+			},
+			expected: map[string]any{
+				"error_reasons": []cher.E{{Code: "reason_1"}, {Code: "reason_2"}},
+				"error_meta":    cher.M{"key": "value"},
+			},
+		},
+		{
+			name:     "With cher.E containing no reasons or meta",
+			err:      cher.New("test_error", nil),
+			expected: map[string]any{},
+		},
+		{
+			name:     "With non-cher error",
+			err:      errors.New("non-cher error"),
+			expected: map[string]any{},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			entry := logrus.NewEntry(logrus.New())
+			result := WithCherFields(entry, tc.err)
+
+			for key, value := range tc.expected {
+				assert.Equal(t, value, result.Data[key])
+			}
+
+			for key := range result.Data {
+				if _, ok := tc.expected[key]; !ok {
+					assert.NotContains(t, result.Data, key)
+				}
+			}
+		})
+	}
+}
