@@ -14,9 +14,6 @@ var ErrorCodeMapping = map[string]string{
 	"unknown_system":            "You've provided a system that does not exist.",
 	"unknown_type":              "You're trying to update something this tool cannot handle.",
 	"working_copy_dirty":        "Your config repo working copy is dirty, please clean it up and try again.",
-	"too_many_apps":             "You can only specify one application for web updates",
-	"web_deployment_not_found":  "The commit hash discovered has not been pushed to s3 yet",
-	"terraform_token_not_found": "No Terraform token found. Please generate one on Terraform (https://app.terraform.io/app/settings/tokens) and put it into the environment variable \"CUVVA_TERRAFORM_TOKEN\".",
 }
 
 var OverruleChecks = map[string]string{
