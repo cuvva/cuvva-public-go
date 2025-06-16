@@ -53,10 +53,19 @@ This command will find all services on the `master` branch and remove that from 
 
 `cdep update-default {type} {env|all}`
 
+#### Service Filtering
+
+For services, you can filter by technology type:
+
+- `--go-only`: Only update Go services (services with `docker_image_name: go_services`)
+- `--js-only`: Only update JS services (services with `docker_image_name` != `go_services`)
+
 For example
 
 - `cdep update-default lambdas avocado`
 - `cdep update-default services all`
+- `cdep update-default services avocado --go-only`
+- `cdep update-default services avocado --js-only`
 
 ## Common errors
 

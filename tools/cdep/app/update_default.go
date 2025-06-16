@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"regexp"
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/cuvva/cuvva-public-go/lib/slicecontains"
@@ -17,7 +18,47 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChecks []string) error {
+// dockerImageNameRegex regex pattern to extract docker_image_name from service config files
+var dockerImageNameRegex = regexp.MustCompile(`"?docker_image_name"?\s*:\s*"?([a-zA-Z\d_-]+)"?`)
+
+// shouldUpdateService determines if a service should be updated based on the filter flags
+func shouldUpdateService(filePath string, goOnly, jsOnly bool) (bool, error) {
+	// If no filters are set, update all services
+	if !goOnly && !jsOnly {
+		return true, nil
+	}
+
+	// Read the service configuration file
+	fileContents, err := os.ReadFile(filePath)
+	if err != nil {
+		return false, fmt.Errorf("failed to read service config file %s: %w", filePath, err)
+	}
+
+	// Extract docker_image_name from the file
+	matches := dockerImageNameRegex.FindSubmatch(fileContents)
+	if len(matches) != 2 {
+		// If we can't find docker_image_name, skip this service with a warning
+		log.Warnf("Could not find docker_image_name in %s, skipping", filePath)
+		return false, nil
+	}
+
+	dockerImageName := string(matches[1])
+
+	// Apply filters based on docker_image_name
+	if goOnly {
+		// Only update Go services (docker_image_name == "go_services")
+		return dockerImageName == "go_services", nil
+	}
+
+	if jsOnly {
+		// Only update JS services (docker_image_name != "go_services")
+		return dockerImageName != "go_services", nil
+	}
+
+	return true, nil
+}
+
+func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChecks []string, goOnly, jsOnly bool) error {
 	log.Info("getting latest commit hash")
 
 	if req.Commit == "" {
@@ -115,6 +156,17 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 				}
 
 				fullPath := path.Join(p, file.Name())
+
+				// Apply service filtering based on flags
+				shouldUpdate, err := shouldUpdateService(fullPath, goOnly, jsOnly)
+				if err != nil {
+					return err
+				}
+
+				if !shouldUpdate {
+					log.Debugf("Skipping service %s due to filtering", file.Name())
+					continue
+				}
 
 				changed, err := a.AddToConfig(fullPath, req.Branch, req.Commit)
 				if err != nil {
