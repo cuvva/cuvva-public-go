@@ -24,6 +24,8 @@ func init() {
 	UpdateDefaultCmd.Flags().StringSliceP("overrule-checks", "", []string{}, "Overrule checks the tool does")
 	UpdateDefaultCmd.Flags().StringP("message", "m", "", "More details about the deployment")
 	UpdateDefaultCmd.Flags().StringP("commit", "c", "", "Commit hash to use")
+	UpdateDefaultCmd.Flags().BoolP("go-only", "", false, "Only update Go services (docker_image_name: go_services or go-services)")
+	UpdateDefaultCmd.Flags().BoolP("js-only", "", false, "Only update JS services (docker_image_name != go_services/go-services)")
 
 	UpdateDefaultCmd.Flags().MarkHidden("overrule-checks")
 
@@ -44,6 +46,8 @@ var UpdateDefaultCmd = &cobra.Command{
 	Example: strings.Join([]string{
 		"update-default services avocado",
 		"update-default services avocado -c f1ec178befe6ed26ce9cec0aa419c763c203bc92",
+		"update-default services avocado --go-only",
+		"update-default services avocado --js-only",
 		"update-default lambda all",
 	}, "\n"),
 	Args: updateDefaultArgs,
@@ -68,6 +72,23 @@ var UpdateDefaultCmd = &cobra.Command{
 		commit, err := cmd.Flags().GetString("commit")
 		if err != nil {
 			return err
+		}
+
+		goOnly, err := cmd.Flags().GetBool("go-only")
+		if err != nil {
+			return err
+		}
+
+		jsOnly, err := cmd.Flags().GetBool("js-only")
+		if err != nil {
+			return err
+		}
+
+		// Validate that both flags are not set at the same time
+		if goOnly && jsOnly {
+			return cher.New("conflicting_flags", cher.M{
+				"message": "Cannot specify both --go-only and --js-only flags",
+			})
 		}
 
 		params, err := parsers.Parse(args, useProd)
@@ -102,7 +123,7 @@ var UpdateDefaultCmd = &cobra.Command{
 			return err
 		}
 
-		return a.UpdateDefault(ctx, params, overruleChecks)
+		return a.UpdateDefault(ctx, params, overruleChecks, goOnly, jsOnly)
 	},
 }
 

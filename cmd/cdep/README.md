@@ -13,11 +13,30 @@ A CLI tool to deploy things to a specific environment. Covers both orchestrated 
 
 This tool is designed to speed up quick day-to-day updates, and is not meant to be all encompassing.
 
-`cdep update {type} {env|all} {...services}`
+`cdep update {type} {env|all} {...services|all}`
+
+#### Updating All Services
+
+You can now use `all` as the service name to update all services in an environment:
+
+- `cdep update service avocado all` - Updates all services in avocado environment
+- `cdep update service all all` - Updates all services in all environments
+
+#### Service Filtering for Update Command
+
+The `update` command now supports the same filtering options as `update-default`:
+
+- `--go-only`: Only update Go services (services with `docker_image_name: go_services` or `go-services`)
+- `--js-only`: Only update JS services (services with `docker_image_name` != `go_services`/`go-services`)
+
+Examples:
+- `cdep update service avocado all --go-only -c abc123` - Update only Go services in avocado
+- `cdep update service all all --js-only -c abc123` - Update only JS services in all environments
 
 For example:
 
 - `cdep u service avocado -b fix-it sms ltm email web-underwriter`
+- `cdep u service avocado all -c f1ec178befe6ed26ce9cec0aa419c763c203bc92`
 - `cdep u service all sms`
 - `cdep u lambda avocado -b fix-it marketing-consent stm-policy-sale`
 - `cdep u service prod ltm --prod`
@@ -53,10 +72,21 @@ This command will find all services on the `master` branch and remove that from 
 
 `cdep update-default {type} {env|all}`
 
+#### Service Filtering
+
+For services, you can filter by technology type:
+
+- `--go-only`: Only update Go services (services with `docker_image_name: go_services` or `go-services`)
+- `--js-only`: Only update JS services (services with `docker_image_name` != `go_services`/`go-services`)
+
+**Note:** `_base.json` files are always updated regardless of filtering flags, as they are template/base configuration files that don't contain meaningful docker_image_name values for filtering.
+
 For example
 
 - `cdep update-default lambdas avocado`
 - `cdep update-default services all`
+- `cdep update-default services avocado --go-only`
+- `cdep update-default services avocado --js-only`
 
 ## Common errors
 

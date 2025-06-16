@@ -11,13 +11,16 @@ import (
 	"github.com/cuvva/cuvva-public-go/lib/slicecontains"
 	"github.com/cuvva/cuvva-public-go/tools/cdep"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/git"
+	"github.com/cuvva/cuvva-public-go/tools/cdep/helpers"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/parsers"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/paths"
 	gogit "github.com/go-git/go-git/v5"
 	log "github.com/sirupsen/logrus"
 )
 
-func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChecks []string) error {
+
+
+func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChecks []string, goOnly, jsOnly bool) error {
 	log.Info("getting latest commit hash")
 
 	if req.Commit == "" {
@@ -115,6 +118,21 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 				}
 
 				fullPath := path.Join(p, file.Name())
+
+				// Apply service filtering based on flags (skip filtering for _base.json)
+				if file.Name() != "_base.json" {
+					shouldUpdate, err := helpers.ShouldUpdateService(fullPath, goOnly, jsOnly)
+					if err != nil {
+						return err
+					}
+
+					if !shouldUpdate {
+						log.Debugf("Skipping service %s due to filtering", file.Name())
+						continue
+					}
+				} else {
+					log.Debugf("Processing base configuration file %s (skipping docker image filtering)", file.Name())
+				}
 
 				changed, err := a.AddToConfig(fullPath, req.Branch, req.Commit)
 				if err != nil {

@@ -17,6 +17,8 @@ var ErrorCodeMapping = map[string]string{
 	"too_many_apps":             "You can only specify one application for web updates",
 	"web_deployment_not_found":  "The commit hash discovered has not been pushed to s3 yet",
 	"terraform_token_not_found": "No Terraform token found. Please generate one on Terraform (https://app.terraform.io/app/settings/tokens) and put it into the environment variable \"CUVVA_TERRAFORM_TOKEN\".",
+	"conflicting_flags":         "Cannot specify both --go-only and --js-only flags at the same time.",
+	"missing_services":          "You must specify service names or use 'all' to update all services.",
 }
 
 var OverruleChecks = map[string]string{
