@@ -6,20 +6,17 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"regexp"
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/cuvva/cuvva-public-go/lib/slicecontains"
 	"github.com/cuvva/cuvva-public-go/tools/cdep"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/git"
+	"github.com/cuvva/cuvva-public-go/tools/cdep/helpers"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/parsers"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/paths"
 	gogit "github.com/go-git/go-git/v5"
 	log "github.com/sirupsen/logrus"
 )
-
-// dockerImageNameRegex regex pattern to extract docker_image_name from service config files
-var dockerImageNameRegex = regexp.MustCompile(`"?docker_image_name"?\s*:\s*"?([a-zA-Z\d_-]+)"?`)
 
 // shouldUpdateService determines if a service should be updated based on the filter flags
 func shouldUpdateService(filePath string, goOnly, jsOnly bool) (bool, error) {
@@ -28,21 +25,17 @@ func shouldUpdateService(filePath string, goOnly, jsOnly bool) (bool, error) {
 		return true, nil
 	}
 
-	// Read the service configuration file
-	fileContents, err := os.ReadFile(filePath)
+	// Extract docker_image_name from the service configuration file
+	dockerImageName, err := helpers.ExtractDockerImageName(filePath)
 	if err != nil {
-		return false, fmt.Errorf("failed to read service config file %s: %w", filePath, err)
+		return false, err
 	}
 
-	// Extract docker_image_name from the file
-	matches := dockerImageNameRegex.FindSubmatch(fileContents)
-	if len(matches) != 2 {
+	if dockerImageName == "" {
 		// If we can't find docker_image_name, skip this service with a warning
 		log.Warnf("Could not find docker_image_name in %s, skipping", filePath)
 		return false, nil
 	}
-
-	dockerImageName := string(matches[1])
 
 	// Apply filters based on docker_image_name
 	if goOnly {

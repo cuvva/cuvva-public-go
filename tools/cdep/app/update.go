@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"regexp"
 
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/cuvva/cuvva-public-go/lib/cher"
@@ -15,14 +14,13 @@ import (
 	"github.com/cuvva/cuvva-public-go/lib/slicecontains"
 	"github.com/cuvva/cuvva-public-go/tools/cdep"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/git"
+	"github.com/cuvva/cuvva-public-go/tools/cdep/helpers"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/parsers"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/paths"
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
-
-var imageName = regexp.MustCompile(`"?docker_image_name"?\s*:\s*"?([a-zA-Z\d_-]+)"?`)
 
 func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []string) error {
 	if req.Environment == "prod" && req.Branch != cdep.DefaultBranch {
@@ -229,19 +227,16 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 }
 
 func checkECRImage(filePath, latestHash, branch string) error {
-	fileContents, err := os.ReadFile(filePath)
+	dockerImageName, err := helpers.ExtractDockerImageName(filePath)
 	if err != nil {
 		return err
 	}
 
-	matches := imageName.FindSubmatch(fileContents)
-	if len(matches) != 2 {
+	if dockerImageName == "" {
 		return cher.New("invalid_docker_image_name", nil)
 	}
 
-	dockerImageName := matches[1]
-
-	return findBuildInECR(string(dockerImageName), latestHash, branch)
+	return findBuildInECR(dockerImageName, latestHash, branch)
 }
 
 func findBuildInECR(dockerImageName, latestHash, branch string) error {
