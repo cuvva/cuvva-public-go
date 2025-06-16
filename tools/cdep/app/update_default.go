@@ -18,38 +18,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// shouldUpdateService determines if a service should be updated based on the filter flags
-func shouldUpdateService(filePath string, goOnly, jsOnly bool) (bool, error) {
-	// If no filters are set, update all services
-	if !goOnly && !jsOnly {
-		return true, nil
-	}
 
-	// Extract docker_image_name from the service configuration file
-	dockerImageName, err := helpers.ExtractDockerImageName(filePath)
-	if err != nil {
-		return false, err
-	}
-
-	if dockerImageName == "" {
-		// If we can't find docker_image_name, skip this service with a warning
-		log.Warnf("Could not find docker_image_name in %s, skipping", filePath)
-		return false, nil
-	}
-
-	// Apply filters based on docker_image_name
-	if goOnly {
-		// Only update Go services (docker_image_name == "go_services")
-		return dockerImageName == "go_services", nil
-	}
-
-	if jsOnly {
-		// Only update JS services (docker_image_name != "go_services")
-		return dockerImageName != "go_services", nil
-	}
-
-	return true, nil
-}
 
 func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChecks []string, goOnly, jsOnly bool) error {
 	log.Info("getting latest commit hash")
@@ -150,15 +119,19 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 
 				fullPath := path.Join(p, file.Name())
 
-				// Apply service filtering based on flags
-				shouldUpdate, err := shouldUpdateService(fullPath, goOnly, jsOnly)
-				if err != nil {
-					return err
-				}
+				// Apply service filtering based on flags (skip filtering for _base.json)
+				if file.Name() != "_base.json" {
+					shouldUpdate, err := helpers.ShouldUpdateService(fullPath, goOnly, jsOnly)
+					if err != nil {
+						return err
+					}
 
-				if !shouldUpdate {
-					log.Debugf("Skipping service %s due to filtering", file.Name())
-					continue
+					if !shouldUpdate {
+						log.Debugf("Skipping service %s due to filtering", file.Name())
+						continue
+					}
+				} else {
+					log.Debugf("Processing base configuration file %s (skipping docker image filtering)", file.Name())
 				}
 
 				changed, err := a.AddToConfig(fullPath, req.Branch, req.Commit)

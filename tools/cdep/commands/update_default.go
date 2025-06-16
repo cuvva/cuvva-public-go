@@ -24,8 +24,8 @@ func init() {
 	UpdateDefaultCmd.Flags().StringSliceP("overrule-checks", "", []string{}, "Overrule checks the tool does")
 	UpdateDefaultCmd.Flags().StringP("message", "m", "", "More details about the deployment")
 	UpdateDefaultCmd.Flags().StringP("commit", "c", "", "Commit hash to use")
-	UpdateDefaultCmd.Flags().BoolP("go-only", "", false, "Only update Go services (docker_image_name: go_services)")
-	UpdateDefaultCmd.Flags().BoolP("js-only", "", false, "Only update JS services (docker_image_name != go_services)")
+	UpdateDefaultCmd.Flags().BoolP("go-only", "", false, "Only update Go services (docker_image_name: go_services or go-services)")
+	UpdateDefaultCmd.Flags().BoolP("js-only", "", false, "Only update JS services (docker_image_name != go_services/go-services)")
 
 	UpdateDefaultCmd.Flags().MarkHidden("overrule-checks")
 

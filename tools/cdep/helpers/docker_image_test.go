@@ -30,7 +30,18 @@ func TestExtractDockerImageName(t *testing.T) {
 }`,
 			expectedImage: "go_services",
 			expectedError: false,
-			description:   "Standard Go service JSON config",
+			description:   "Standard Go service JSON config (underscore)",
+		},
+		{
+			name: "go_services_hyphen_json",
+			fileContent: `{
+	"docker_image_name": "go-services",
+	"branch": "master",
+	"commit": "abc123"
+}`,
+			expectedImage: "go-services",
+			expectedError: false,
+			description:   "Standard Go service JSON config (hyphen)",
 		},
 		{
 			name: "js_service_json",
@@ -167,6 +178,17 @@ branch: "master"`,
 			expectedImage: "",
 			expectedError: false,
 			description:   "File with only whitespace",
+		},
+		{
+			name: "base_config_file",
+			fileContent: `{
+	"docker_image_name": "base_template_service",
+	"branch": "master",
+	"commit": "template123"
+}`,
+			expectedImage: "base_template_service",
+			expectedError: false,
+			description:   "Base configuration file (should extract image name but be filtered out at higher level)",
 		},
 	}
 

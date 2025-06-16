@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/cuvva/cuvva-public-go/lib/cher"
@@ -22,7 +23,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []string) error {
+func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []string, goOnly, jsOnly bool) error {
 	if req.Environment == "prod" && req.Branch != cdep.DefaultBranch {
 		return cher.New("invalid_operation", nil)
 	}
@@ -113,33 +114,42 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 
 		switch req.Type {
 		case "service":
-			for _, service := range req.Items {
-				p := paths.GetPathForService(repoPath, req.System, env, service)
+			if len(req.Items) == 0 {
+				// Handle "all" services - discover all service files
+				err := a.updateAllServices(repoPath, req, env, &updatedFiles, goOnly, jsOnly)
+				if err != nil {
+					return err
+				}
+			} else {
+				// Handle specific services
+				for _, service := range req.Items {
+					p := paths.GetPathForService(repoPath, req.System, env, service)
 
-				if _, err := os.Stat(p); err != nil {
-					p = paths.GetYamlPathForService(repoPath, req.System, env, service)
-					_, err2 := os.Stat(p)
-					if err2 != nil {
-						log.Warn(err)
-						log.Warn(err2)
+					if _, err := os.Stat(p); err != nil {
+						p = paths.GetYamlPathForService(repoPath, req.System, env, service)
+						_, err2 := os.Stat(p)
+						if err2 != nil {
+							log.Warn(err)
+							log.Warn(err2)
+						}
 					}
-				}
 
-				err := checkECRImage(p, req.Commit, req.Branch)
-				if err != nil {
-					e := errors.Wrap(err, "ecr")
-					log.Warn(e)
-				}
+					err := checkECRImage(p, req.Commit, req.Branch)
+					if err != nil {
+						e := errors.Wrap(err, "ecr")
+						log.Warn(e)
+					}
 
-				changed, err := a.AddToConfig(p, req.Branch, req.Commit)
-				if err != nil {
-					return fmt.Errorf("add to config: %w", err)
-				}
+					changed, err := a.AddToConfig(p, req.Branch, req.Commit)
+					if err != nil {
+						return fmt.Errorf("add to config: %w", err)
+					}
 
-				if changed {
-					filename := path.Base(p)
-					shorthandPath := path.Join(req.System, env, "service", filename)
-					updatedFiles = append(updatedFiles, shorthandPath)
+					if changed {
+						filename := path.Base(p)
+						shorthandPath := path.Join(req.System, env, "service", filename)
+						updatedFiles = append(updatedFiles, shorthandPath)
+					}
 				}
 			}
 		case "lambda":
@@ -272,6 +282,71 @@ func findBuildInECR(dockerImageName, latestHash, branch string) error {
 
 	if len(images.Images) != 1 {
 		log.Warn("Cannot find image in ECR!")
+	}
+
+	return nil
+}
+
+// updateAllServices discovers and updates all service files in the given environment
+func (a App) updateAllServices(repoPath string, req *parsers.Params, env string, updatedFiles *[]string, goOnly, jsOnly bool) error {
+	// Get the path for services in this environment
+	servicePath := path.Join(repoPath, req.System, env, "service")
+
+	// Read all files in the service directory
+	files, err := os.ReadDir(servicePath)
+	if err != nil {
+		// If the service directory doesn't exist, that's okay - just return
+		if os.IsNotExist(err) {
+			log.Debugf("No service directory found for %s/%s, skipping", req.System, env)
+			return nil
+		}
+		return fmt.Errorf("failed to read service directory %s: %w", servicePath, err)
+	}
+
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+
+		// Skip non-service files (like _base.json, _default.json)
+		if strings.HasPrefix(file.Name(), "_") {
+			log.Debugf("Skipping system file %s", file.Name())
+			continue
+		}
+
+		fullPath := path.Join(servicePath, file.Name())
+
+		// Apply service filtering based on flags (only if filters are set)
+		if goOnly || jsOnly {
+			shouldUpdate, err := helpers.ShouldUpdateService(fullPath, goOnly, jsOnly)
+			if err != nil {
+				return fmt.Errorf("failed to check service filter for %s: %w", file.Name(), err)
+			}
+
+			if !shouldUpdate {
+				log.Debugf("Skipping service %s due to filtering", file.Name())
+				continue
+			}
+		}
+
+		// Check ECR image
+		err := checkECRImage(fullPath, req.Commit, req.Branch)
+		if err != nil {
+			e := errors.Wrap(err, "ecr")
+			log.Warn(e)
+		}
+
+		// Update the service configuration
+		changed, err := a.AddToConfig(fullPath, req.Branch, req.Commit)
+		if err != nil {
+			return fmt.Errorf("add to config for %s: %w", file.Name(), err)
+		}
+
+		if changed {
+			shorthandPath := path.Join(req.System, env, "service", file.Name())
+			*updatedFiles = append(*updatedFiles, shorthandPath)
+			log.Infof("Updated service %s", file.Name())
+		}
 	}
 
 	return nil

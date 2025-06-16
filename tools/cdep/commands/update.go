@@ -25,6 +25,8 @@ func init() {
 	UpdateCmd.Flags().BoolP("dry-run", "", false, "Dry run only?")
 	UpdateCmd.Flags().StringSliceP("overrule-checks", "", []string{}, "Overrule checks the tool does")
 	UpdateCmd.Flags().StringP("message", "m", "", "More details about the deployment")
+	UpdateCmd.Flags().BoolP("go-only", "", false, "Only update Go services (docker_image_name: go_services or go-services)")
+	UpdateCmd.Flags().BoolP("js-only", "", false, "Only update JS services (docker_image_name != go_services/go-services)")
 
 	UpdateCmd.Flags().MarkHidden("overrule-checks")
 
@@ -46,7 +48,9 @@ var UpdateCmd = &cobra.Command{
 	Example: strings.Join([]string{
 		"update service avocado sms email -b extra-logging",
 		"update service avocado sms email -b extra-logging -c f1ec178befe6ed26ce9cec0aa419c763c203bc92",
-		"update service all sms email -c 1ed6fd7450031a5240584f8bbe8ec527f9020b5b",
+		"update service avocado all -c 1ed6fd7450031a5240584f8bbe8ec527f9020b5b",
+		"update service avocado all --go-only -c 1ed6fd7450031a5240584f8bbe8ec527f9020b5b",
+		"update service all all --js-only -c 1ed6fd7450031a5240584f8bbe8ec527f9020b5b",
 		"update service prod email --prod",
 		"update lambda basil ltm-proxy",
 		"update cloudfront prod website --prod",
@@ -82,6 +86,23 @@ var UpdateCmd = &cobra.Command{
 			return err
 		}
 
+		goOnly, err := cmd.Flags().GetBool("go-only")
+		if err != nil {
+			return err
+		}
+
+		jsOnly, err := cmd.Flags().GetBool("js-only")
+		if err != nil {
+			return err
+		}
+
+		// Validate that both flags are not set at the same time
+		if goOnly && jsOnly {
+			return cher.New("conflicting_flags", cher.M{
+				"message": "Cannot specify both --go-only and --js-only flags",
+			})
+		}
+
 		params, err := parsers.Parse(args, useProd)
 		if err != nil {
 			return err
@@ -114,7 +135,7 @@ var UpdateCmd = &cobra.Command{
 			return err
 		}
 
-		return a.Update(ctx, params, overruleChecks)
+		return a.Update(ctx, params, overruleChecks, goOnly, jsOnly)
 	},
 }
 
@@ -141,7 +162,7 @@ func updateArgs(cmd *cobra.Command, args []string) error {
 	case len(args) == 1:
 		return cher.New("missing_environment", cher.M{"allowed": cdep.ListEnvironments(system)})
 	case len(args) == 2:
-		return cher.New("missing_services", nil)
+		return cher.New("missing_services", cher.M{"hint": "Specify service names or 'all' to update all services"})
 	case len(args) >= 3:
 		return nil
 	default:
