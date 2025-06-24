@@ -29,6 +29,7 @@ type Request struct {
 
 	RemoteAddr    string
 	BrowserOrigin string
+	Header        http.Header
 
 	ctx context.Context
 }
@@ -49,6 +50,49 @@ func (r *Request) Context() context.Context {
 func (r *Request) WithContext(ctx context.Context) *Request {
 	r.ctx = ctx
 	return r
+}
+
+// GetHeader returns the first value associated with the given key.
+// If there are no values associated with the key, GetHeader returns "".
+// It is case insensitive; textproto.CanonicalMIMEHeaderKey is used
+// to canonicalize the provided key.
+func (r *Request) GetHeader(key string) string {
+	if r.Header == nil {
+		return ""
+	}
+	return r.Header.Get(key)
+}
+
+// SetHeader sets the header entries associated with key to the
+// single element value. It replaces any existing values
+// associated with key. The key is case insensitive; it is
+// canonicalized by textproto.CanonicalMIMEHeaderKey.
+func (r *Request) SetHeader(key, value string) {
+	if r.Header == nil {
+		r.Header = make(http.Header)
+	}
+	r.Header.Set(key, value)
+}
+
+// AddHeader adds the key, value pair to the header.
+// It appends to any existing values associated with key.
+// The key is case insensitive; it is canonicalized by
+// textproto.CanonicalMIMEHeaderKey.
+func (r *Request) AddHeader(key, value string) {
+	if r.Header == nil {
+		r.Header = make(http.Header)
+	}
+	r.Header.Add(key, value)
+}
+
+// DelHeader deletes the values associated with key.
+// The key is case insensitive; it is canonicalized by
+// textproto.CanonicalMIMEHeaderKey.
+func (r *Request) DelHeader(key string) {
+	if r.Header == nil {
+		return
+	}
+	r.Header.Del(key)
 }
 
 type contextKey string
@@ -565,6 +609,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		RemoteAddr:    r.RemoteAddr,
 		BrowserOrigin: r.Header.Get("Origin"),
+		Header:        r.Header,
 	}
 	req.ctx = setRequestContext(r.Context(), req)
 
