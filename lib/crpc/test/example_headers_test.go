@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"testing"
 
 	"github.com/cuvva/cuvva-public-go/lib/crpc"
 )
 
 // ExampleRequest_Headers demonstrates how to read and manipulate HTTP headers
 // in CRPC request handlers.
-func ExampleRequest_Headers() {
+func TestExampleRequestHeaders(t *testing.T) {
 	// Create a new CRPC server
 	server := crpc.NewServer(func(next crpc.HandlerFunc) crpc.HandlerFunc {
 		return func(res http.ResponseWriter, req *crpc.Request) error {
