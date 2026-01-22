@@ -39,6 +39,11 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 		req.Commit = latestHash
 	}
 
+	// Validate commit hash is a full 40-character hash, not a short hash or branch name
+	if err := cdep.ValidateCommitHash(req.Commit); err != nil {
+		return err
+	}
+
 	repoPath, err := paths.GetConfigRepo()
 	if err != nil {
 		return fmt.Errorf("path get config repo: %w", err)

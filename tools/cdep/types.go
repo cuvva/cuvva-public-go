@@ -1,6 +1,7 @@
 package cdep
 
 import (
+	"regexp"
 	"sort"
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
@@ -45,4 +46,18 @@ func ListTypes() []string {
 	sort.Strings(allowed)
 
 	return allowed
+}
+
+// ValidateCommitHash validates that a commit hash is exactly 40 hexadecimal characters
+// This prevents short hashes and branch names from being used, which cause issues
+// with ECR image tags and regex matching in config files.
+func ValidateCommitHash(commit string) error {
+	// Git commit hashes are exactly 40 hexadecimal characters
+	commitHashRegex := regexp.MustCompile(`^[a-f0-9]{40}$`)
+	if !commitHashRegex.MatchString(commit) {
+		return cher.New("invalid_commit_hash", cher.M{
+			"commit": commit,
+		})
+	}
+	return nil
 }
