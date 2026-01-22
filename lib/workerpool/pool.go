@@ -68,11 +68,33 @@ func (w *Worker) Do(fns ...WorkerFunc) {
 			atomic.AddInt64(&w.activeOperations, 1)
 			f := fn
 			go func() {
+				defer func() {
+					// If we couldn't send (channel closed), decrement the counter
+					if r := recover(); r != nil {
+						atomic.AddInt64(&w.activeOperations, -1)
+					}
+				}()
+				// Check context first before attempting to send
 				select {
 				case <-w.ctx.Done():
+					atomic.AddInt64(&w.activeOperations, -1)
 					return
 				default:
-					w.pendingTasks <- f
+					// Try to send, but handle panic if channel is closed
+					func() {
+						defer func() {
+							if r := recover(); r != nil {
+								atomic.AddInt64(&w.activeOperations, -1)
+							}
+						}()
+						select {
+						case <-w.ctx.Done():
+							atomic.AddInt64(&w.activeOperations, -1)
+							return
+						case w.pendingTasks <- f:
+							// Successfully sent
+						}
+					}()
 				}
 			}()
 		}
