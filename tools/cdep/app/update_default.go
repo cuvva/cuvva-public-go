@@ -77,6 +77,12 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 		return err
 	}
 
+	// Re-open the repo after native git pull so go-git reads the fresh index
+	configRepo, err = gogit.PlainOpen(repoPath)
+	if err != nil {
+		return fmt.Errorf("config git reopen: %w", err)
+	}
+
 	wt, err := configRepo.Worktree()
 	if err != nil {
 		return err
