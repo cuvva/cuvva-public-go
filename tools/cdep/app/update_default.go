@@ -77,18 +77,18 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 		return err
 	}
 
-	wt, err := configRepo.Worktree()
-	if err != nil {
-		return err
-	}
-
-	err = git.CheckWorkingCopy(wt)
+	err = git.CheckWorkingCopy(repoPath)
 	if err != nil {
 		if !slicecontains.String(overruleChecks, "working_copy_dirty") {
 			return err
 		}
 
 		log.Warn("working_copy_dirty overruled")
+	}
+
+	wt, err := configRepo.Worktree()
+	if err != nil {
+		return err
 	}
 
 	envs, err := a.LoadEnvs(repoPath, req.System, req.Environment)

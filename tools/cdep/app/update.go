@@ -91,18 +91,18 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 		return fmt.Errorf("git pull: %w", err)
 	}
 
-	wt, err := configRepo.Worktree()
-	if err != nil {
-		return fmt.Errorf("config git work tree: %w", err)
-	}
-
-	err = git.CheckWorkingCopy(wt)
+	err = git.CheckWorkingCopy(repoPath)
 	if err != nil {
 		if !slicecontains.String(overruleChecks, "working_copy_dirty") {
 			return fmt.Errorf("config git check working copy: %w", err)
 		}
 
 		log.Warn("working_copy_dirty overruled")
+	}
+
+	wt, err := configRepo.Worktree()
+	if err != nil {
+		return fmt.Errorf("config git work tree: %w", err)
 	}
 
 	log.Info("adding hash and branch to json files")
