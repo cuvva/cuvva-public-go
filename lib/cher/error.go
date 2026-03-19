@@ -1,6 +1,7 @@
 package cher
 
 import (
+	"cuvva/lib/pii"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
@@ -41,18 +42,21 @@ type E struct {
 func New(code string, meta M, reasons ...E) E {
 	return E{
 		Code:    code,
-		Meta:    meta,
+		Meta:    SanitizeMeta(meta),
 		Reasons: reasons,
 	}
 }
 
 // Errorf returns a new E structure, with a message formatted by fmt.
 func Errorf(code string, meta M, format string, args ...interface{}) E {
+	if meta == nil {
+		meta = M{}
+	}
 	meta["message"] = fmt.Sprintf(format, args...)
 
 	return E{
 		Code: code,
-		Meta: meta,
+		Meta: SanitizeMeta(meta),
 	}
 }
 
@@ -191,4 +195,21 @@ func WrapIfNotCherCode(err error, msg string, codes ...string) error {
 
 func AsCherWithCode(err error, codes ...string) (cErr E, ok bool) {
 	return cErr, errors.As(err, &cErr) && slices.Contains(codes, cErr.Code)
+}
+
+func SanitizeMeta(meta M) M {
+	if meta == nil {
+		return nil
+	}
+
+	sanitized := make(M)
+	for k, v := range meta {
+		strVal, ok := v.(string)
+		if ok && pii.IsLikelyPII(strVal) {
+			sanitized[k] = "[REDACTED]"
+		} else {
+			sanitized[k] = v
+		}
+	}
+	return sanitized
 }
