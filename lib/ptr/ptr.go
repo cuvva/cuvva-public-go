@@ -31,3 +31,13 @@ func Float64(v float64) *float64 {
 func Time(v time.Time) *time.Time {
 	return &v
 }
+
+// Equal returns true if the two parameters are both nil or are pointers to the same value. Provides a type-safe generic
+// alternative to reflect.DeepEqual that ensures both parameters are pointers to the same comparable type.
+func Equal[T comparable](a *T, b *T) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+
+	return *a == *b
+}
