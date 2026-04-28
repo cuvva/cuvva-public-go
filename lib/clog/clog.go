@@ -40,6 +40,8 @@ const (
 	TimestampKey = "_timestamp"
 )
 
+const RFC3339Milli = "2006-01-02T15:04:05.000Z07:00"
+
 // Config allows services to configure the logging format, level and storage options
 // for Logrus logging.
 type Config struct {
@@ -75,6 +77,7 @@ func (c Config) Configure(ctx context.Context) (log *logrus.Entry) {
 	switch c.Format {
 	case "json", "logstash":
 		log.Logger.Formatter = &logrus.JSONFormatter{
+			TimestampFormat: RFC3339Milli,
 			FieldMap: logrus.FieldMap{
 				logrus.FieldKeyLevel: LevelKey,
 				logrus.FieldKeyMsg:   MessageKey,
