@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/cuvva/cuvva-public-go/lib/servicecontext"
@@ -39,8 +40,6 @@ const (
 	// TimestampKey is the log entry key for the timestamp
 	TimestampKey = "_timestamp"
 )
-
-const RFC3339Milli = "2006-01-02T15:04:05.000Z07:00"
 
 // Config allows services to configure the logging format, level and storage options
 // for Logrus logging.
@@ -77,7 +76,7 @@ func (c Config) Configure(ctx context.Context) (log *logrus.Entry) {
 	switch c.Format {
 	case "json", "logstash":
 		log.Logger.Formatter = &logrus.JSONFormatter{
-			TimestampFormat: RFC3339Milli,
+			TimestampFormat: time.RFC3339Nano,
 			FieldMap: logrus.FieldMap{
 				logrus.FieldKeyLevel: LevelKey,
 				logrus.FieldKeyMsg:   MessageKey,
