@@ -104,3 +104,43 @@ func TestEqual(t *testing.T) {
 		assert.False(t, ptr.Equal(nil, b))
 	})
 }
+
+func TestCopy(t *testing.T) {
+	t.Run("nil returns nil", func(t *testing.T) {
+		assert.Nil(t, ptr.Copy[int](nil))
+	})
+
+	t.Run("copies the value into a new pointer", func(t *testing.T) {
+		v := 42
+		p := &v
+		c := ptr.Copy(p)
+
+		assert.NotNil(t, c)
+		assert.Equal(t, *p, *c)
+		assert.NotSame(t, p, c)
+	})
+
+	t.Run("mutating the copy does not affect the original", func(t *testing.T) {
+		v := "hello"
+		p := &v
+		c := ptr.Copy(p)
+
+		*c = "world"
+
+		assert.Equal(t, "hello", *p)
+		assert.Equal(t, "world", *c)
+	})
+
+	t.Run("struct values are duplicated", func(t *testing.T) {
+		type person struct {
+			name string
+		}
+		p := ptr.Ptr(person{name: "John"})
+		c := ptr.Copy(p)
+
+		c.name = "Yoko"
+
+		assert.Equal(t, "John", p.name)
+		assert.Equal(t, "Yoko", c.name)
+	})
+}

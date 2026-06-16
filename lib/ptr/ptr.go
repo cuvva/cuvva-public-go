@@ -41,3 +41,15 @@ func Equal[T comparable](a *T, b *T) bool {
 
 	return *a == *b
 }
+
+// Copy returns nil if the given pointer is nil, otherwise it copies the pointed-to value into a new variable and
+// returns a pointer to that copy. This is useful when assigning pointer fields between structs so that mutating one
+// struct does not affect the other.
+func Copy[T any](v *T) *T {
+	if v == nil {
+		return nil
+	}
+
+	c := *v
+	return &c
+}
