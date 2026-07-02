@@ -51,6 +51,7 @@ var UpdateCmd = &cobra.Command{
 		"update lambda basil ltm-proxy",
 		"update cloudfront prod website --prod",
 		"update terra avocado aws-env",
+		"update agentcore _system my-agent other-agent",
 	}, "\n"),
 	Aliases: []string{"u"},
 	Args:    updateArgs,
@@ -85,6 +86,12 @@ var UpdateCmd = &cobra.Command{
 		params, err := parsers.Parse(args, useProd)
 		if err != nil {
 			return err
+		}
+
+		// agentcore config tracks the "main" branch rather than "master";
+		// default to it unless the user explicitly passed -b.
+		if params.Type == "agentcore" && !cmd.Flags().Changed("branch") {
+			branch = cdep.AgentcoreDefaultBranch
 		}
 
 		params.Branch = branch
