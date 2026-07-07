@@ -4,9 +4,14 @@ import (
 	"context"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 )
+
+// lsRemoteTimeout bounds a single `git ls-remote` call so a network stall
+// against an agent's repo cannot hang the whole deploy indefinitely.
+const lsRemoteTimeout = 30 * time.Second
 
 // GetLatestCommitHashForRepo returns the tip commit of branchName for an
 // arbitrary remote repo identified by repoURL, so each agentcore item can
@@ -18,6 +23,9 @@ import (
 // instead of go-git's agent-only auth.
 func GetLatestCommitHashForRepo(ctx context.Context, repoURL, branchName string) (string, error) {
 	target := "refs/heads/" + branchName
+
+	ctx, cancel := context.WithTimeout(ctx, lsRemoteTimeout)
+	defer cancel()
 
 	out, err := exec.CommandContext(ctx, "git", "ls-remote", repoURL, target).Output()
 	if err != nil {
