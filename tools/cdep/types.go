@@ -8,11 +8,12 @@ import (
 )
 
 var Types = map[string]struct{}{
-	"lambda":   {},
-	"lambdas":  {},
-	"service":  {},
-	"services": {},
-	"terra":    {},
+	"lambda":    {},
+	"lambdas":   {},
+	"service":   {},
+	"services":  {},
+	"terra":     {},
+	"agentcore": {},
 }
 
 func ParseTypeArg(in string) (string, error) {
@@ -30,6 +31,8 @@ func ParseTypeArg(in string) (string, error) {
 		return "lambda", nil
 	case "terra":
 		return "terra", nil
+	case "agentcore":
+		return "agentcore", nil
 	default:
 		return "", cher.New("impossible", nil)
 	}

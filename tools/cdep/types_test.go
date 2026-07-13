@@ -4,6 +4,33 @@ import (
 	"testing"
 )
 
+func TestParseTypeArg(t *testing.T) {
+	cases := map[string]string{
+		"service":   "service",
+		"services":  "service",
+		"lambda":    "lambda",
+		"lambdas":   "lambda",
+		"terra":     "terra",
+		"agentcore": "agentcore",
+	}
+
+	for in, want := range cases {
+		t.Run(in, func(t *testing.T) {
+			got, err := ParseTypeArg(in)
+			if err != nil {
+				t.Fatalf("ParseTypeArg(%q) error: %v", in, err)
+			}
+			if got != want {
+				t.Fatalf("ParseTypeArg(%q) = %q, want %q", in, got, want)
+			}
+		})
+	}
+
+	if _, err := ParseTypeArg("nope"); err == nil {
+		t.Fatal("expected error for unknown type")
+	}
+}
+
 func TestValidateCommitHash(t *testing.T) {
 	tests := []struct {
 		name    string

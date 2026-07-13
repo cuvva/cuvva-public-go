@@ -29,7 +29,28 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 		return cher.New("invalid_operation", nil)
 	}
 
-	if req.Commit == "" {
+	// agentcore config only exists under the _system env, so reject anything else
+	// (including "all") up front rather than failing later with a confusing
+	// missing-file error while iterating per-service environments.
+	if req.Type == "agentcore" && req.Environment != "_system" {
+		return cher.New("agentcore_requires_system_env", nil)
+	}
+
+	// agentcore lives under the _system env, so it bypasses the env == "prod"
+	// guard above; enforce the default branch for prod agentcore deploys directly.
+	if req.Type == "agentcore" && req.System == "prod" && req.Branch != cdep.AgentcoreDefaultBranch {
+		return cher.New("invalid_operation", nil)
+	}
+
+	// A single explicit --commit cannot be applied across agentcore items, as
+	// each agent has its own source repo; deploy one agent at a time when pinning.
+	if req.Type == "agentcore" && req.Commit != "" && len(req.Items) > 1 {
+		return cher.New("commit_requires_single_agent", nil)
+	}
+
+	// agentcore items each declare their own source repo in their config, so the
+	// commit is resolved per-item below rather than once from the monorepo here.
+	if req.Commit == "" && req.Type != "agentcore" {
 		log.Info("getting latest commit hash")
 		latestHash, err := git.GetLatestCommitHash(ctx, req.Branch)
 		if err != nil {
@@ -40,8 +61,10 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 	}
 
 	// Validate commit hash is a full 40-character hash, not a short hash or branch name
-	if err := cdep.ValidateCommitHash(req.Commit); err != nil {
-		return err
+	if req.Commit != "" {
+		if err := cdep.ValidateCommitHash(req.Commit); err != nil {
+			return err
+		}
 	}
 
 	repoPath, err := paths.GetConfigRepo()
@@ -182,6 +205,49 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 
 				if changed {
 					shorthandPath := path.Join(req.System, env, "terra", workspace+".json")
+					updatedFiles = append(updatedFiles, shorthandPath)
+				}
+			}
+		case "agentcore":
+			for _, item := range req.Items {
+				p := paths.GetPathForAgentcore(repoPath, req.System, env, item)
+
+				// Warn and skip a missing/misnamed item rather than aborting the
+				// whole run; matches how AddToConfig tolerates missing files for
+				// the other types, and avoids readAgentcoreRepo hard-erroring below.
+				if _, err := os.Stat(p); err != nil {
+					log.Warn(err)
+					continue
+				}
+
+				// Each agent declares its own source repo, so resolve the latest
+				// commit from that repo unless one was pinned with --commit.
+				commit := req.Commit
+				if commit == "" {
+					repoURL, err := readAgentcoreRepo(p)
+					if err != nil {
+						return fmt.Errorf("read agentcore repo: %w", err)
+					}
+
+					log.Infof("resolving latest %s commit for %s from %s", req.Branch, item, repoURL)
+
+					commit, err = git.GetLatestCommitHashForRepo(ctx, repoURL, req.Branch)
+					if err != nil {
+						return fmt.Errorf("get agentcore commit: %w", err)
+					}
+
+					if err := cdep.ValidateCommitHash(commit); err != nil {
+						return err
+					}
+				}
+
+				changed, err := a.AddToConfig(p, req.Branch, commit)
+				if err != nil {
+					return err
+				}
+
+				if changed {
+					shorthandPath := path.Join(req.System, env, "agentcore", item+".json")
 					updatedFiles = append(updatedFiles, shorthandPath)
 				}
 			}

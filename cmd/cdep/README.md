@@ -15,6 +15,8 @@ This tool is designed to speed up quick day-to-day updates, and is not meant to 
 
 `cdep update {type} {env|all} {...services}`
 
+Supported types are `service`, `lambda`, `terra` and `agentcore`.
+
 For example:
 
 - `cdep u service avocado -b fix-it sms ltm email web-underwriter`
@@ -22,6 +24,31 @@ For example:
 - `cdep u lambda avocado -b fix-it marketing-consent stm-policy-sale`
 - `cdep u service prod ltm --prod`
 - `cdep u service avocado ltm -b fix-it`
+
+#### agentcore
+
+Agentcore config lives under the special `_system` environment (`{system}/_system/agentcore`),
+so it is always deployed against `_system` rather than a per-service environment. It also tracks
+the `main` branch by default instead of `master`, so `-b` is only needed to deploy another branch.
+
+Unlike services and lambdas (which build from the monorepo), each agent lives in its own repo.
+Every agentcore config file must therefore declare its source repo, and cdep resolves the latest
+commit for the requested branch from that repo — no local clone required:
+
+```json
+{
+	"repo": "git@github.com:example-org/example-agent.git",
+	"branch": "main",
+	"commit": "0000000000000000000000000000000000000000"
+}
+```
+
+- `cdep u agentcore _system my-agent other-agent` (each resolves its own repo's `main` tip)
+- `cdep u agentcore _system my-agent --prod`
+- `cdep u agentcore _system my-agent -b my-feature`
+- `cdep u agentcore _system my-agent -c <40-char-hash>` (pin one agent to a specific commit)
+
+Because each agent has its own repo, a pinned `-c` can only target a single agent at a time.
 
 Or with some flags
 

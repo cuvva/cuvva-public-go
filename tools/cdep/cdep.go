@@ -5,19 +5,26 @@ const Version = "0.6"
 // DefaultBranch is the default main branch
 const DefaultBranch = "master"
 
+// AgentcoreDefaultBranch is the default branch for agentcore deployments
+const AgentcoreDefaultBranch = "main"
+
 var ErrorCodeMapping = map[string]string{
-	"config_not_on_master":      "Your config repo is not on master, please swap your HEAD back to master.",
-	"frozen_without_commit":     "We found a resource where the config is locked, but no commit is specified.",
-	"frozen":                    "The resource you're trying to update is currently frozen.",
-	"nothing_changed":           "Running this tool has resulted in no change.",
-	"unknown_environment":       "You've provided an environment that does not exist in the provided system.",
-	"unknown_system":            "You've provided a system that does not exist.",
-	"unknown_type":              "You're trying to update something this tool cannot handle.",
-	"working_copy_dirty":        "Your config repo working copy is dirty, please clean it up and try again.",
-	"too_many_apps":             "You can only specify one application for web updates",
-	"web_deployment_not_found":  "The commit hash discovered has not been pushed to s3 yet",
-	"terraform_token_not_found": "No Terraform token found. Please generate one on Terraform (https://app.terraform.io/app/settings/tokens) and put it into the environment variable \"CUVVA_TERRAFORM_TOKEN\".",
-	"invalid_commit_hash":       "Commit hash must be exactly 40 hexadecimal characters. Short hashes and branch names are not allowed. Please provide the full commit hash.",
+	"config_not_on_master":          "Your config repo is not on master, please swap your HEAD back to master.",
+	"frozen_without_commit":         "We found a resource where the config is locked, but no commit is specified.",
+	"frozen":                        "The resource you're trying to update is currently frozen.",
+	"nothing_changed":               "Running this tool has resulted in no change.",
+	"unknown_environment":           "You've provided an environment that does not exist in the provided system.",
+	"unknown_system":                "You've provided a system that does not exist.",
+	"unknown_type":                  "You're trying to update something this tool cannot handle.",
+	"working_copy_dirty":            "Your config repo working copy is dirty, please clean it up and try again.",
+	"too_many_apps":                 "You can only specify one application for web updates",
+	"web_deployment_not_found":      "The commit hash discovered has not been pushed to s3 yet",
+	"terraform_token_not_found":     "No Terraform token found. Please generate one on Terraform (https://app.terraform.io/app/settings/tokens) and put it into the environment variable \"CUVVA_TERRAFORM_TOKEN\".",
+	"invalid_commit_hash":           "Commit hash must be exactly 40 hexadecimal characters. Short hashes and branch names are not allowed. Please provide the full commit hash.",
+	"missing_agentcore_repo":        "This agentcore config is missing a \"repo\" field. Add the agent's source repo (SSH URL) so cdep knows where to resolve the commit from.",
+	"invalid_agentcore_config":      "This agentcore config could not be parsed as JSON.",
+	"commit_requires_single_agent":  "A pinned --commit can only target one agentcore agent at a time, as each agent has its own source repo.",
+	"agentcore_requires_system_env": "agentcore config only exists under the \"_system\" env; use \"_system\" as the environment.",
 }
 
 var OverruleChecks = map[string]string{
