@@ -2,37 +2,55 @@ package git
 
 import (
 	"errors"
+	"os/exec"
 	"strings"
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
-	gogit "github.com/go-git/go-git/v5"
 )
 
-func CheckRepo(repo *gogit.Repository) (*gogit.Remote, error) {
-	remotes, err := repo.Remotes()
+// CheckRepo validates the repo at repoPath has exactly one remote configured
+// over SSH, and returns the remote's name
+func CheckRepo(repoPath string) (string, error) {
+	out, err := exec.Command("git", "-C", repoPath, "remote").Output()
 	if err != nil {
-		return nil, err
+		return "", cher.New("git_repo_error", cher.M{
+			"error": gitErrString(err),
+		})
 	}
 
+	remotes := strings.Fields(string(out))
+
 	if len(remotes) > 1 {
-		return nil, cher.New("multiple_remotes", nil)
+		return "", cher.New("multiple_remotes", nil)
 	}
 
 	if len(remotes) == 0 {
-		return nil, cher.New("no_remotes", nil)
+		return "", cher.New("no_remotes", nil)
 	}
 
 	remote := remotes[0]
 
-	if !isRemoteURLSSH(remote) {
-		return nil, errors.New("cuvva repo remote origin url is not ssh")
+	remoteURL, err := exec.Command("git", "-C", repoPath, "remote", "get-url", remote).Output()
+	if err != nil {
+		return "", cher.New("git_repo_error", cher.M{
+			"error": gitErrString(err),
+		})
 	}
 
-	return remotes[0], nil
+	if !strings.Contains(string(remoteURL), "git@") {
+		return "", errors.New("cuvva repo remote origin url is not ssh")
+	}
+
+	return remote, nil
 }
 
-func isRemoteURLSSH(remote *gogit.Remote) bool {
-	remoteURL := remote.Config().URLs[0]
+// gitErrString returns git's stderr where available, as the exec error alone
+// only reports the exit status
+func gitErrString(err error) string {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) && len(exitErr.Stderr) > 0 {
+		return strings.TrimSpace(string(exitErr.Stderr))
+	}
 
-	return strings.Contains(remoteURL, "git@")
+	return err.Error()
 }
