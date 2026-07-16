@@ -53,3 +53,14 @@ func Copy[T any](v *T) *T {
 	c := *v
 	return &c
 }
+
+// Value returns the pointed-to value, or the zero value if the pointer is nil. Provides the symmetric counterpart to
+// Ptr for safely dereferencing optional values.
+func Value[T any](p *T) T {
+	if p == nil {
+		var zero T
+		return zero
+	}
+
+	return *p
+}

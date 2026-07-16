@@ -144,3 +144,32 @@ func TestCopy(t *testing.T) {
 		assert.Equal(t, "Yoko", c.name)
 	})
 }
+
+func TestValue(t *testing.T) {
+	t.Run("nil int pointer returns zero value", func(t *testing.T) {
+		assert.Equal(t, 0, ptr.Value[int](nil))
+	})
+
+	t.Run("nil string pointer returns zero value", func(t *testing.T) {
+		assert.Equal(t, "", ptr.Value[string](nil))
+	})
+
+	t.Run("nil struct pointer returns zero value", func(t *testing.T) {
+		type person struct {
+			name string
+		}
+
+		assert.Equal(t, person{}, ptr.Value[person](nil))
+	})
+
+	t.Run("non-nil pointer returns the pointed-to value", func(t *testing.T) {
+		assert.Equal(t, 42, ptr.Value(ptr.Int(42)))
+		assert.Equal(t, "hello", ptr.Value(ptr.String("hello")))
+
+		type person struct {
+			name string
+		}
+		p := ptr.Ptr(person{name: "John"})
+		assert.Equal(t, person{name: "John"}, ptr.Value(p))
+	})
+}
