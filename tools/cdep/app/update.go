@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/cuvva/cuvva-public-go/lib/cher"
@@ -17,7 +18,6 @@ import (
 	"github.com/cuvva/cuvva-public-go/tools/cdep/git"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/parsers"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/paths"
-	gogit "github.com/go-git/go-git/v5"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -79,27 +79,20 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 		return err
 	}
 
-	log.Info("opening config repo")
+	log.Info("checking config repo")
 
-	configRepo, err := gogit.PlainOpen(repoPath)
-	if err != nil {
-		return cher.New("git_repo_error", cher.M{
-			"error": err,
-		})
-	}
-
-	_, err = git.CheckRepo(configRepo)
+	_, err = git.CheckRepo(repoPath)
 	if err != nil {
 		return fmt.Errorf("config git check repo: %w", err)
 	}
 
-	ref, err := configRepo.Head()
+	ref, err := exec.CommandContext(ctx, "git", "-C", repoPath, "symbolic-ref", "HEAD").Output()
 	if err != nil {
 		return fmt.Errorf("config git head: %w", err)
 	}
 
 	defaultRef := fmt.Sprintf("refs/heads/%s", cdep.DefaultBranch)
-	if ref.Name().String() != defaultRef {
+	if strings.TrimSpace(string(ref)) != defaultRef {
 		if !slicecontains.String(overruleChecks, "config_not_on_master") {
 			return cher.New("config_not_on_master", nil)
 		}
@@ -121,11 +114,6 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 		}
 
 		log.Warn("working_copy_dirty overruled")
-	}
-
-	wt, err := configRepo.Worktree()
-	if err != nil {
-		return fmt.Errorf("config git work tree: %w", err)
 	}
 
 	log.Info("adding hash and branch to json files")
@@ -278,14 +266,14 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 
 	for _, p := range updatedFiles {
 		log.Infof("adding %s to commit", p)
-		_, err := wt.Add(p)
-		if err != nil {
+		if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "add", p).CombinedOutput(); err != nil {
+			fmt.Println(string(out))
 			return fmt.Errorf("config git add: %w", err)
 		}
 	}
 
-	_, err = wt.Commit(commitMessage, &gogit.CommitOptions{})
-	if err != nil {
+	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "commit", "-m", commitMessage).CombinedOutput(); err != nil {
+		fmt.Println(string(out))
 		return fmt.Errorf("config git commit: %w", err)
 	}
 

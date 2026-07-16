@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/cuvva/cuvva-public-go/lib/slicecontains"
@@ -13,7 +14,6 @@ import (
 	"github.com/cuvva/cuvva-public-go/tools/cdep/git"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/parsers"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/paths"
-	gogit "github.com/go-git/go-git/v5"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -46,27 +46,20 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 		return err
 	}
 
-	log.Info("opening config repo")
+	log.Info("checking config repo")
 
-	configRepo, err := gogit.PlainOpen(repoPath)
-	if err != nil {
-		return cher.New("git_repo_error", cher.M{
-			"error": err,
-		})
-	}
-
-	_, err = git.CheckRepo(configRepo)
+	_, err = git.CheckRepo(repoPath)
 	if err != nil {
 		return err
 	}
 
-	ref, err := configRepo.Head()
+	ref, err := exec.CommandContext(ctx, "git", "-C", repoPath, "symbolic-ref", "HEAD").Output()
 	if err != nil {
 		return err
 	}
 
 	defaultRef := fmt.Sprintf("refs/heads/%s", cdep.DefaultBranch)
-	if ref.Name().String() != defaultRef {
+	if strings.TrimSpace(string(ref)) != defaultRef {
 		return cher.New("config_not_on_default", nil)
 	}
 
@@ -84,11 +77,6 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 		}
 
 		log.Warn("working_copy_dirty overruled")
-	}
-
-	wt, err := configRepo.Worktree()
-	if err != nil {
-		return err
 	}
 
 	envs, err := a.LoadEnvs(repoPath, req.System, req.Environment)
@@ -152,14 +140,14 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 
 	for _, p := range updatedFiles {
 		log.Infof("adding %s to commit", p)
-		_, err := wt.Add(p)
-		if err != nil {
+		if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "add", p).CombinedOutput(); err != nil {
+			fmt.Println(string(out))
 			return err
 		}
 	}
 
-	_, err = wt.Commit(commitMessage, &gogit.CommitOptions{})
-	if err != nil {
+	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "commit", "-m", commitMessage).CombinedOutput(); err != nil {
+		fmt.Println(string(out))
 		return err
 	}
 
