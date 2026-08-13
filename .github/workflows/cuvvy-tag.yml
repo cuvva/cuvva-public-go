@@ -1,0 +1,22 @@
+# Place this in cuvva-public-go at .github/workflows/cuvvy-tag.yml
+#
+# Calls the centrally managed Cuvvy interactive chat workflow. Responds to
+# @cuvvy mentions on issues, PRs, and reviews. Repo-specific config is
+# auto-detected from github.repository.
+
+name: Cuvvy Tag
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned, labeled]
+
+jobs:
+  claude-chat-action:
+    uses: cuvva/gha-cuvvy-workflows/.github/workflows/cuvvy-tag.yml@main
+    secrets: inherit

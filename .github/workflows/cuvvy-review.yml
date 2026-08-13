@@ -1,0 +1,17 @@
+# Place this in cuvva-public-go at .github/workflows/cuvvy-review.yml
+#
+# Calls the centrally managed Cuvvy review workflow. Repo-specific config is
+# auto-detected from github.repository (repos/cuvva-public-go/ in gha-cuvvy-workflows).
+
+name: Cuvvy Review
+
+on:
+  pull_request:
+    types:
+      - review_requested
+      - opened
+
+jobs:
+  auto-review:
+    uses: cuvva/gha-cuvvy-workflows/.github/workflows/cuvvy-review.yml@main
+    secrets: inherit
