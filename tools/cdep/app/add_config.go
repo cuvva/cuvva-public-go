@@ -19,7 +19,13 @@ var imageTagRegAdd = regexp.MustCompile(`"tag"\s*:\s*"([^"]+)"`)
 
 var commitRegAddYaml = regexp.MustCompile(`commit\s*:\s*"?[a-f\d]{40}"?`)
 var imageTagRegAddYaml = regexp.MustCompile(`tag\s*:\s*"?[a-z\d-]+"?`)
-var branchRegAddYaml = regexp.MustCompile(`branch\s*:\s*"?([a-zA-Z\d-._]+)"?`)
+
+// branchRegAddYaml must match the same branch names git allows, which include
+// path separators (e.g. "claude/my-feature"). The character class therefore
+// permits "/" and "\" as well as the usual identifier characters; omitting them
+// truncated slashed branches to their first segment (e.g. "claude"), leaving the
+// wrong branch in config and corrupting the value on redeploy.
+var branchRegAddYaml = regexp.MustCompile(`branch\s*:\s*"?([a-zA-Z\d._/\\-]+)"?`)
 
 var jsonExtraCommaCheck = regexp.MustCompile(`,\s*}`)
 
