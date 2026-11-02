@@ -125,8 +125,7 @@ The Go services go out now; running the command again later deploys the rest.
 `--dry-run` shows what would be updated and skipped without committing anything. `--force` deploys
 everything regardless, including when ECR can't be reached.
 
-Because of this check, deploying services needs AWS credentials that can read ECR (the same ones
-you use for prod deploys). Without them cdep stops with `ecr_unavailable`.
+Because of this check, deploying services needs AWS credentials that can read ECR. Without them cdep stops with `ecr_unavailable`.
 
 How cdep finds a service's image:
 
