@@ -29,6 +29,10 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 		return cher.New("invalid_operation", nil)
 	}
 
+	if err := validateServiceSelection(req); err != nil {
+		return err
+	}
+
 	// agentcore config only exists under the _system env, so reject anything else
 	// (including "all") up front rather than failing later with a confusing
 	// missing-file error while iterating per-service environments.
@@ -125,38 +129,38 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 		return fmt.Errorf("load envs: %w", err)
 	}
 
+	ecr := newECRChecker(req.Commit, req.Branch)
+
 	var envNames []string
 	for env := range envs {
 		envNames = append(envNames, env)
 
 		switch req.Type {
 		case "service":
-			for _, service := range req.Items {
-				p := paths.GetPathForService(repoPath, req.System, env, service)
+			var files []serviceFile
 
-				if _, err := os.Stat(p); err != nil {
-					p = paths.GetYamlPathForService(repoPath, req.System, env, service)
-					_, err2 := os.Stat(p)
-					if err2 != nil {
-						log.Warn(err)
-						log.Warn(err2)
-					}
-				}
+			if req.AllItems {
+				// Every service in the env; env-wide _base files are left to update-default.
+				files, err = listServiceFiles(path.Join(repoPath, req.System, env, "service"), false)
+			} else {
+				files, err = namedServiceFiles(repoPath, req.System, env, req.Items)
+			}
+			if err != nil {
+				return fmt.Errorf("list services: %w", err)
+			}
 
-				err := checkECRImage(p, req.Commit, req.Branch)
-				if err != nil {
-					e := errors.Wrap(err, "ecr")
-					log.Warn(e)
-				}
+			selected, _ := filterServiceFiles(env, req.Only, files)
 
-				changed, err := a.AddToConfig(p, req.Branch, req.Commit)
+			for _, f := range selected {
+				ecr.Check(f)
+
+				changed, err := a.AddToConfig(f.Path, req.Branch, req.Commit)
 				if err != nil {
 					return fmt.Errorf("add to config: %w", err)
 				}
 
 				if changed {
-					filename := path.Base(p)
-					shorthandPath := path.Join(req.System, env, "service", filename)
+					shorthandPath := path.Join(req.System, env, "service", f.Name())
 					updatedFiles = append(updatedFiles, shorthandPath)
 				}
 			}
@@ -259,6 +263,7 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 	printDashboards(dashboards)
 
 	if a.DryRun {
+		logDryRun(updatedFiles)
 		log.Info("Dry run only, stopping now")
 		log.Infof("commit message (%s)\n", commitMessage)
 		return nil
@@ -285,22 +290,6 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 	}
 
 	return nil
-}
-
-func checkECRImage(filePath, latestHash, branch string) error {
-	fileContents, err := os.ReadFile(filePath)
-	if err != nil {
-		return err
-	}
-
-	matches := imageName.FindSubmatch(fileContents)
-	if len(matches) != 2 {
-		return cher.New("invalid_docker_image_name", nil)
-	}
-
-	dockerImageName := matches[1]
-
-	return findBuildInECR(string(dockerImageName), latestHash, branch)
 }
 
 func findBuildInECR(dockerImageName, latestHash, branch string) error {
@@ -335,8 +324,37 @@ func findBuildInECR(dockerImageName, latestHash, branch string) error {
 	}
 
 	if len(images.Images) != 1 {
-		log.Warn("Cannot find image in ECR!")
+		log.Warnf("Cannot find a %s image for %s-%s in ECR! Has the build finished?", dockerImageName, branchName, latestHash)
+		return nil
+	}
+
+	log.Infof("found %s image for %s-%s in ECR", dockerImageName, branchName, latestHash)
+
+	return nil
+}
+
+// validateServiceSelection rejects "all" and the language filters for anything
+// other than services, where they have no meaning.
+func validateServiceSelection(req *parsers.Params) error {
+	if req.Type == "service" {
+		return nil
+	}
+
+	if req.AllItems {
+		return cher.New("all_requires_services", cher.M{"type": req.Type})
+	}
+
+	if req.Only != "" {
+		return cher.New("filter_requires_services", cher.M{"type": req.Type})
 	}
 
 	return nil
+}
+
+func logDryRun(updatedFiles []string) {
+	log.Infof("%d file(s) would be updated:", len(updatedFiles))
+
+	for _, p := range updatedFiles {
+		log.Infof("  %s", p)
+	}
 }

@@ -42,3 +42,38 @@ func TestUpdateAgentcoreGuards(t *testing.T) {
 		})
 	}
 }
+
+// "all" and the language filters only mean something for services; both
+// commands reject them for other types before touching git, config or AWS.
+func TestServiceSelectionGuards(t *testing.T) {
+	tests := []struct {
+		name string
+		req  *parsers.Params
+		want string
+	}{
+		{
+			name: "filter on lambdas",
+			req:  &parsers.Params{Type: "lambda", System: "nonprod", Environment: "avocado", Branch: "master", Only: "go", Items: []string{"a"}},
+			want: "filter_requires_services",
+		},
+		{
+			name: "all on terra",
+			req:  &parsers.Params{Type: "terra", System: "nonprod", Environment: "avocado", Branch: "master", AllItems: true},
+			want: "all_requires_services",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := App{}.Update(context.Background(), tt.req, nil)
+			if code := cher.Coerce(err).Code; code != tt.want {
+				t.Fatalf("update: got %q, want %q (err: %v)", code, tt.want, err)
+			}
+
+			err = App{}.UpdateDefault(context.Background(), tt.req, nil)
+			if code := cher.Coerce(err).Code; code != tt.want {
+				t.Fatalf("update-default: got %q, want %q (err: %v)", code, tt.want, err)
+			}
+		})
+	}
+}

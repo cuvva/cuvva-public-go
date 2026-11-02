@@ -29,6 +29,7 @@ require (
 	golang.org/x/text v0.36.0
 	gopkg.in/h2non/gock.v1 v1.1.2
 	gopkg.in/intercom/intercom-go.v2 v2.0.0-20200217143803-6ffc0627261a
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -89,5 +90,4 @@ require (
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

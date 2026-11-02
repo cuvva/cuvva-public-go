@@ -25,6 +25,8 @@ func init() {
 	UpdateDefaultCmd.Flags().StringP("message", "m", "", "More details about the deployment")
 	UpdateDefaultCmd.Flags().StringP("commit", "c", "", "Commit hash to use")
 
+	addLanguageFlags(UpdateDefaultCmd)
+
 	UpdateDefaultCmd.Flags().MarkHidden("overrule-checks")
 
 	var envs string
@@ -44,6 +46,8 @@ var UpdateDefaultCmd = &cobra.Command{
 	Example: strings.Join([]string{
 		"update-default services avocado",
 		"update-default services avocado -c f1ec178befe6ed26ce9cec0aa419c763c203bc92",
+		"update-default services avocado --go-only",
+		"update-default services all --js-only",
 		"update-default lambda all",
 	}, "\n"),
 	Args: updateDefaultArgs,
@@ -70,10 +74,17 @@ var UpdateDefaultCmd = &cobra.Command{
 			return err
 		}
 
+		only, err := languageFilter(cmd)
+		if err != nil {
+			return err
+		}
+
 		params, err := parsers.Parse(args, useProd)
 		if err != nil {
 			return err
 		}
+
+		params.Only = only
 
 		params.Branch = cdep.DefaultBranch
 		params.Message = message

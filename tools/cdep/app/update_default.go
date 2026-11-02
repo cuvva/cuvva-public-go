@@ -18,6 +18,10 @@ import (
 )
 
 func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChecks []string) error {
+	if err := validateServiceSelection(req); err != nil {
+		return err
+	}
+
 	log.Info("getting latest commit hash")
 
 	if req.Commit == "" {
@@ -84,40 +88,59 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 		return err
 	}
 
-	loadedPaths := map[string][]string{}
-
-	for env := range envs {
-		path := path.Join(repoPath, req.System, env, req.Type)
-		loadedPaths[env] = append(loadedPaths[env], path)
-	}
-
 	updatedFiles := []string{}
+	ecr := newECRChecker(req.Commit, req.Branch)
 
 	log.Info("editing json files")
 
-	for env, paths := range loadedPaths {
-		for _, p := range paths {
-			files, err := os.ReadDir(p)
+	for env := range envs {
+		dir := path.Join(repoPath, req.System, env, req.Type)
+
+		if req.Type == "service" {
+			files, err := listServiceFiles(dir, true)
 			if err != nil {
 				return err
 			}
 
-			for _, file := range files {
-				if file.IsDir() {
-					continue
-				}
+			selected, skipped := filterServiceFiles(env, req.Only, files)
 
-				fullPath := path.Join(p, file.Name())
+			for _, f := range selected {
+				ecr.Check(f)
 
-				changed, err := a.AddToConfig(fullPath, req.Branch, req.Commit)
+				changed, err := a.AddToConfig(f.Path, req.Branch, req.Commit)
 				if err != nil {
 					return err
 				}
 
 				if changed {
-					shortPath := path.Join(req.System, env, req.Type, file.Name())
-					updatedFiles = append(updatedFiles, shortPath)
+					updatedFiles = append(updatedFiles, path.Join(req.System, env, req.Type, f.Name()))
+
+					if f.IsEnvFile() {
+						warnInheritedVersions(env, f, skipped)
+					}
 				}
+			}
+
+			continue
+		}
+
+		files, err := os.ReadDir(dir)
+		if err != nil {
+			return err
+		}
+
+		for _, file := range files {
+			if file.IsDir() {
+				continue
+			}
+
+			changed, err := a.AddToConfig(path.Join(dir, file.Name()), req.Branch, req.Commit)
+			if err != nil {
+				return err
+			}
+
+			if changed {
+				updatedFiles = append(updatedFiles, path.Join(req.System, env, req.Type, file.Name()))
 			}
 		}
 	}
@@ -133,6 +156,7 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 	}
 
 	if a.DryRun {
+		logDryRun(updatedFiles)
 		log.Info("Dry run only, stopping now")
 		log.Infof("commit message (%s)\n", commitMessage)
 		return nil

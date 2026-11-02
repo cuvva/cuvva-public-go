@@ -12,13 +12,21 @@ type Params struct {
 	Commit      string
 	System      string
 	Items       []string
-	Message     string
+	// AllItems is set when "all" was given instead of a list of services, and
+	// selects every service in the environment.
+	AllItems bool
+	// Only limits services to those built by one pipeline: cdep.LanguageGo or
+	// cdep.LanguageJS. Empty means every service.
+	Only    string
+	Message string
 }
 
 func (p Params) String(command string) (out string) {
 	out = fmt.Sprintf("%s %s %s", command, p.Type, p.Environment)
 
-	if len(p.Items) > 0 {
+	if p.AllItems {
+		out = fmt.Sprintf("%s all", out)
+	} else if len(p.Items) > 0 {
 		items := []string{}
 		for _, item := range p.Items {
 			items = append(items, strings.TrimPrefix(item, "service-"))
@@ -26,6 +34,10 @@ func (p Params) String(command string) (out string) {
 
 		itemsStr := strings.Join(items, " ")
 		out = fmt.Sprintf("%s %s", out, itemsStr)
+	}
+
+	if p.Only != "" {
+		out = fmt.Sprintf("%s --%s-only", out, p.Only)
 	}
 
 	if p.Branch != "master" {
