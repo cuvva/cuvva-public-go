@@ -13,34 +13,42 @@ A CLI tool to deploy things to a specific environment. Covers both orchestrated 
 
 This tool is designed to speed up quick day-to-day updates, and is not meant to be all encompassing.
 
-`cdep update {type} {env|all} {...services|all}`
+`cdep update {type} {env|all} {...services}`
 
-#### Updating All Services
-
-You can now use `all` as the service name to update all services in an environment:
-
-- `cdep update service avocado all` - Updates all services in avocado environment
-- `cdep update service all all` - Updates all services in all environments
-
-#### Service Filtering for Update Command
-
-The `update` command now supports the same filtering options as `update-default`:
-
-- `--go-only`: Only update Go services (services with `docker_image_name: go_services` or `go-services`)
-- `--js-only`: Only update JS services (services with `docker_image_name` != `go_services`/`go-services`)
-
-Examples:
-- `cdep update service avocado all --go-only -c abc123` - Update only Go services in avocado
-- `cdep update service all all --js-only -c abc123` - Update only JS services in all environments
+Supported types are `service`, `lambda`, `terra` and `agentcore`.
 
 For example:
 
 - `cdep u service avocado -b fix-it sms ltm email web-underwriter`
-- `cdep u service avocado all -c f1ec178befe6ed26ce9cec0aa419c763c203bc92`
 - `cdep u service all sms`
 - `cdep u lambda avocado -b fix-it marketing-consent stm-policy-sale`
 - `cdep u service prod ltm --prod`
 - `cdep u service avocado ltm -b fix-it`
+
+#### agentcore
+
+Agentcore config lives under the special `_system` environment (`{system}/_system/agentcore`),
+so it is always deployed against `_system` rather than a per-service environment. It also tracks
+the `main` branch by default instead of `master`, so `-b` is only needed to deploy another branch.
+
+Unlike services and lambdas (which build from the monorepo), each agent lives in its own repo.
+Every agentcore config file must therefore declare its source repo, and cdep resolves the latest
+commit for the requested branch from that repo — no local clone required:
+
+```json
+{
+	"repo": "git@github.com:example-org/example-agent.git",
+	"branch": "main",
+	"commit": "0000000000000000000000000000000000000000"
+}
+```
+
+- `cdep u agentcore _system my-agent other-agent` (each resolves its own repo's `main` tip)
+- `cdep u agentcore _system my-agent --prod`
+- `cdep u agentcore _system my-agent -b my-feature`
+- `cdep u agentcore _system my-agent -c <40-char-hash>` (pin one agent to a specific commit)
+
+Because each agent has its own repo, a pinned `-c` can only target a single agent at a time.
 
 Or with some flags
 
@@ -72,21 +80,10 @@ This command will find all services on the `master` branch and remove that from 
 
 `cdep update-default {type} {env|all}`
 
-#### Service Filtering
-
-For services, you can filter by technology type:
-
-- `--go-only`: Only update Go services (services with `docker_image_name: go_services` or `go-services`)
-- `--js-only`: Only update JS services (services with `docker_image_name` != `go_services`/`go-services`)
-
-**Note:** `_base.json` files are always updated regardless of filtering flags, as they are template/base configuration files that don't contain meaningful docker_image_name values for filtering.
-
 For example
 
 - `cdep update-default lambdas avocado`
 - `cdep update-default services all`
-- `cdep update-default services avocado --go-only`
-- `cdep update-default services avocado --js-only`
 
 ## Common errors
 

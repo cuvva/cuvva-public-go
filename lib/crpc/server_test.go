@@ -447,3 +447,164 @@ func UnsafeNoAuthentication(next HandlerFunc) HandlerFunc {
 		return next(res, req)
 	}
 }
+
+func TestRequestHeaders(t *testing.T) {
+	t.Run("GetHeader", func(t *testing.T) {
+		// Test with nil header
+		req := &Request{}
+		assert.Equal(t, "", req.GetHeader("X-Test"))
+
+		// Test with populated header
+		req.Header = http.Header{
+			"X-Test":        []string{"value1"},
+			"Content-Type":  []string{"application/json"},
+			"Authorization": []string{"Bearer token123"},
+		}
+
+		assert.Equal(t, "value1", req.GetHeader("X-Test"))
+		assert.Equal(t, "application/json", req.GetHeader("Content-Type"))
+		assert.Equal(t, "Bearer token123", req.GetHeader("Authorization"))
+		assert.Equal(t, "", req.GetHeader("Non-Existent"))
+
+		// Test case insensitivity
+		assert.Equal(t, "value1", req.GetHeader("x-test"))
+		assert.Equal(t, "application/json", req.GetHeader("content-type"))
+	})
+
+	t.Run("SetHeader", func(t *testing.T) {
+		// Test with nil header
+		req := &Request{}
+		req.SetHeader("X-Test", "value1")
+		assert.Equal(t, "value1", req.GetHeader("X-Test"))
+
+		// Test replacing existing header
+		req.SetHeader("X-Test", "value2")
+		assert.Equal(t, "value2", req.GetHeader("X-Test"))
+
+		// Test with existing headers
+		req.Header = http.Header{
+			"Existing": []string{"old-value"},
+		}
+		req.SetHeader("Existing", "new-value")
+		assert.Equal(t, "new-value", req.GetHeader("Existing"))
+		req.SetHeader("New-Header", "new-value")
+		assert.Equal(t, "new-value", req.GetHeader("New-Header"))
+	})
+
+	t.Run("AddHeader", func(t *testing.T) {
+		// Test with nil header
+		req := &Request{}
+		req.AddHeader("X-Test", "value1")
+		assert.Equal(t, "value1", req.GetHeader("X-Test"))
+
+		// Test adding to existing header
+		req.AddHeader("X-Test", "value2")
+		values := req.Header["X-Test"]
+		assert.Len(t, values, 2)
+		assert.Contains(t, values, "value1")
+		assert.Contains(t, values, "value2")
+
+		// Test with existing headers
+		req.Header = http.Header{
+			"Existing": []string{"old-value"},
+		}
+		req.AddHeader("Existing", "new-value")
+		values = req.Header["Existing"]
+		assert.Len(t, values, 2)
+		assert.Contains(t, values, "old-value")
+		assert.Contains(t, values, "new-value")
+	})
+
+	t.Run("DelHeader", func(t *testing.T) {
+		// Test with nil header
+		req := &Request{}
+		req.DelHeader("X-Test") // Should not panic
+
+		// Test deleting existing header
+		req.Header = http.Header{
+			"X-Test":   []string{"value1"},
+			"X-Keep":   []string{"keep-value"},
+			"X-Delete": []string{"delete-value"},
+		}
+
+		req.DelHeader("X-Delete")
+		assert.Equal(t, "", req.GetHeader("X-Delete"))
+		assert.Equal(t, "value1", req.GetHeader("X-Test"))
+		assert.Equal(t, "keep-value", req.GetHeader("X-Keep"))
+
+		// Test deleting non-existent header
+		req.DelHeader("Non-Existent") // Should not panic
+	})
+}
+
+func TestRequestHeadersIntegration(t *testing.T) {
+	t.Run("HeadersFromHTTPRequest", func(t *testing.T) {
+		zs := NewServer(UnsafeNoAuthentication)
+
+		// Register a handler that checks headers
+		zs.Register("test_headers", "preview", nil, func(ctx context.Context) (*testResponse, error) {
+			req := GetRequestContext(ctx)
+			if req == nil {
+				return nil, errors.New("no request in context")
+			}
+
+			// Check that headers are properly populated
+			auth := req.GetHeader("Authorization")
+			userAgent := req.GetHeader("User-Agent")
+			customHeader := req.GetHeader("X-Custom-Header")
+
+			return &testResponse{
+				Message: auth + "|" + userAgent + "|" + customHeader,
+			}, nil
+		})
+
+		w := httptest.NewRecorder()
+		r, _ := http.NewRequest("POST", "/preview/test_headers", nil)
+		r.Header.Set("Authorization", "Bearer test-token")
+		r.Header.Set("User-Agent", "test-client/1.0")
+		r.Header.Set("X-Custom-Header", "custom-value")
+
+		zs.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), "Bearer test-token")
+		assert.Contains(t, w.Body.String(), "test-client/1.0")
+		assert.Contains(t, w.Body.String(), "custom-value")
+	})
+
+	t.Run("HeaderModification", func(t *testing.T) {
+		zs := NewServer(UnsafeNoAuthentication)
+
+		// Register a handler that modifies headers
+		zs.Register("modify_headers", "preview", nil, func(ctx context.Context) (*testResponse, error) {
+			req := GetRequestContext(ctx)
+			if req == nil {
+				return nil, errors.New("no request in context")
+			}
+
+			// Modify headers
+			req.SetHeader("X-Modified", "true")
+			req.AddHeader("X-Added", "value1")
+			req.AddHeader("X-Added", "value2")
+			req.DelHeader("X-Remove")
+
+			// Return the modified header values
+			modified := req.GetHeader("X-Modified")
+			added := req.GetHeader("X-Added") // Should return first value
+			removed := req.GetHeader("X-Remove")
+
+			return &testResponse{
+				Message: modified + "|" + added + "|" + removed,
+			}, nil
+		})
+
+		w := httptest.NewRecorder()
+		r, _ := http.NewRequest("POST", "/preview/modify_headers", nil)
+		r.Header.Set("X-Remove", "should-be-removed")
+
+		zs.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Contains(t, w.Body.String(), "true|value1|")
+	})
+}

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/cuvva/cuvva-public-go/lib/servicecontext"
@@ -75,6 +76,7 @@ func (c Config) Configure(ctx context.Context) (log *logrus.Entry) {
 	switch c.Format {
 	case "json", "logstash":
 		log.Logger.Formatter = &logrus.JSONFormatter{
+			TimestampFormat: time.RFC3339Nano,
 			FieldMap: logrus.FieldMap{
 				logrus.FieldKeyLevel: LevelKey,
 				logrus.FieldKeyMsg:   MessageKey,

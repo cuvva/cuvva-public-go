@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"regexp"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/service/ecr"
@@ -15,20 +16,41 @@ import (
 	"github.com/cuvva/cuvva-public-go/lib/slicecontains"
 	"github.com/cuvva/cuvva-public-go/tools/cdep"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/git"
-	"github.com/cuvva/cuvva-public-go/tools/cdep/helpers"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/parsers"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/paths"
-	gogit "github.com/go-git/go-git/v5"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
-func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []string, goOnly, jsOnly bool) error {
+var imageName = regexp.MustCompile(`"?docker_image_name"?\s*:\s*"?([a-zA-Z\d_-]+)"?`)
+
+func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []string) error {
 	if req.Environment == "prod" && req.Branch != cdep.DefaultBranch {
 		return cher.New("invalid_operation", nil)
 	}
 
-	if req.Commit == "" {
+	// agentcore config only exists under the _system env, so reject anything else
+	// (including "all") up front rather than failing later with a confusing
+	// missing-file error while iterating per-service environments.
+	if req.Type == "agentcore" && req.Environment != "_system" {
+		return cher.New("agentcore_requires_system_env", nil)
+	}
+
+	// agentcore lives under the _system env, so it bypasses the env == "prod"
+	// guard above; enforce the default branch for prod agentcore deploys directly.
+	if req.Type == "agentcore" && req.System == "prod" && req.Branch != cdep.AgentcoreDefaultBranch {
+		return cher.New("invalid_operation", nil)
+	}
+
+	// A single explicit --commit cannot be applied across agentcore items, as
+	// each agent has its own source repo; deploy one agent at a time when pinning.
+	if req.Type == "agentcore" && req.Commit != "" && len(req.Items) > 1 {
+		return cher.New("commit_requires_single_agent", nil)
+	}
+
+	// agentcore items each declare their own source repo in their config, so the
+	// commit is resolved per-item below rather than once from the monorepo here.
+	if req.Commit == "" && req.Type != "agentcore" {
 		log.Info("getting latest commit hash")
 		latestHash, err := git.GetLatestCommitHash(ctx, req.Branch)
 		if err != nil {
@@ -36,6 +58,13 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 		}
 
 		req.Commit = latestHash
+	}
+
+	// Validate commit hash is a full 40-character hash, not a short hash or branch name
+	if req.Commit != "" {
+		if err := cdep.ValidateCommitHash(req.Commit); err != nil {
+			return err
+		}
 	}
 
 	repoPath, err := paths.GetConfigRepo()
@@ -50,27 +79,20 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 		return err
 	}
 
-	log.Info("opening config repo")
+	log.Info("checking config repo")
 
-	configRepo, err := gogit.PlainOpen(repoPath)
-	if err != nil {
-		return cher.New("git_repo_error", cher.M{
-			"error": err,
-		})
-	}
-
-	_, err = git.CheckRepo(configRepo)
+	_, err = git.CheckRepo(repoPath)
 	if err != nil {
 		return fmt.Errorf("config git check repo: %w", err)
 	}
 
-	ref, err := configRepo.Head()
+	ref, err := exec.CommandContext(ctx, "git", "-C", repoPath, "symbolic-ref", "HEAD").Output()
 	if err != nil {
 		return fmt.Errorf("config git head: %w", err)
 	}
 
 	defaultRef := fmt.Sprintf("refs/heads/%s", cdep.DefaultBranch)
-	if ref.Name().String() != defaultRef {
+	if strings.TrimSpace(string(ref)) != defaultRef {
 		if !slicecontains.String(overruleChecks, "config_not_on_master") {
 			return cher.New("config_not_on_master", nil)
 		}
@@ -85,12 +107,7 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 		return fmt.Errorf("git pull: %w", err)
 	}
 
-	wt, err := configRepo.Worktree()
-	if err != nil {
-		return fmt.Errorf("config git work tree: %w", err)
-	}
-
-	err = git.CheckWorkingCopy(wt)
+	err = git.CheckWorkingCopy(repoPath)
 	if err != nil {
 		if !slicecontains.String(overruleChecks, "working_copy_dirty") {
 			return fmt.Errorf("config git check working copy: %w", err)
@@ -114,42 +131,33 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 
 		switch req.Type {
 		case "service":
-			if len(req.Items) == 0 {
-				// Handle "all" services - discover all service files
-				err := a.updateAllServices(repoPath, req, env, &updatedFiles, goOnly, jsOnly)
-				if err != nil {
-					return err
+			for _, service := range req.Items {
+				p := paths.GetPathForService(repoPath, req.System, env, service)
+
+				if _, err := os.Stat(p); err != nil {
+					p = paths.GetYamlPathForService(repoPath, req.System, env, service)
+					_, err2 := os.Stat(p)
+					if err2 != nil {
+						log.Warn(err)
+						log.Warn(err2)
+					}
 				}
-			} else {
-				// Handle specific services
-				for _, service := range req.Items {
-					p := paths.GetPathForService(repoPath, req.System, env, service)
 
-					if _, err := os.Stat(p); err != nil {
-						p = paths.GetYamlPathForService(repoPath, req.System, env, service)
-						_, err2 := os.Stat(p)
-						if err2 != nil {
-							log.Warn(err)
-							log.Warn(err2)
-						}
-					}
+				err := checkECRImage(p, req.Commit, req.Branch)
+				if err != nil {
+					e := errors.Wrap(err, "ecr")
+					log.Warn(e)
+				}
 
-					err := checkECRImage(p, req.Commit, req.Branch)
-					if err != nil {
-						e := errors.Wrap(err, "ecr")
-						log.Warn(e)
-					}
+				changed, err := a.AddToConfig(p, req.Branch, req.Commit)
+				if err != nil {
+					return fmt.Errorf("add to config: %w", err)
+				}
 
-					changed, err := a.AddToConfig(p, req.Branch, req.Commit)
-					if err != nil {
-						return fmt.Errorf("add to config: %w", err)
-					}
-
-					if changed {
-						filename := path.Base(p)
-						shorthandPath := path.Join(req.System, env, "service", filename)
-						updatedFiles = append(updatedFiles, shorthandPath)
-					}
+				if changed {
+					filename := path.Base(p)
+					shorthandPath := path.Join(req.System, env, "service", filename)
+					updatedFiles = append(updatedFiles, shorthandPath)
 				}
 			}
 		case "lambda":
@@ -188,6 +196,49 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 					updatedFiles = append(updatedFiles, shorthandPath)
 				}
 			}
+		case "agentcore":
+			for _, item := range req.Items {
+				p := paths.GetPathForAgentcore(repoPath, req.System, env, item)
+
+				// Warn and skip a missing/misnamed item rather than aborting the
+				// whole run; matches how AddToConfig tolerates missing files for
+				// the other types, and avoids readAgentcoreRepo hard-erroring below.
+				if _, err := os.Stat(p); err != nil {
+					log.Warn(err)
+					continue
+				}
+
+				// Each agent declares its own source repo, so resolve the latest
+				// commit from that repo unless one was pinned with --commit.
+				commit := req.Commit
+				if commit == "" {
+					repoURL, err := readAgentcoreRepo(p)
+					if err != nil {
+						return fmt.Errorf("read agentcore repo: %w", err)
+					}
+
+					log.Infof("resolving latest %s commit for %s from %s", req.Branch, item, repoURL)
+
+					commit, err = git.GetLatestCommitHashForRepo(ctx, repoURL, req.Branch)
+					if err != nil {
+						return fmt.Errorf("get agentcore commit: %w", err)
+					}
+
+					if err := cdep.ValidateCommitHash(commit); err != nil {
+						return err
+					}
+				}
+
+				changed, err := a.AddToConfig(p, req.Branch, commit)
+				if err != nil {
+					return err
+				}
+
+				if changed {
+					shorthandPath := path.Join(req.System, env, "agentcore", item+".json")
+					updatedFiles = append(updatedFiles, shorthandPath)
+				}
+			}
 		default:
 			return cher.New("unexpected_type", cher.M{"type": req.Type})
 		}
@@ -215,14 +266,14 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 
 	for _, p := range updatedFiles {
 		log.Infof("adding %s to commit", p)
-		_, err := wt.Add(p)
-		if err != nil {
+		if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "add", p).CombinedOutput(); err != nil {
+			fmt.Println(string(out))
 			return fmt.Errorf("config git add: %w", err)
 		}
 	}
 
-	_, err = wt.Commit(commitMessage, &gogit.CommitOptions{})
-	if err != nil {
+	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "commit", "-m", commitMessage).CombinedOutput(); err != nil {
+		fmt.Println(string(out))
 		return fmt.Errorf("config git commit: %w", err)
 	}
 
@@ -237,16 +288,19 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 }
 
 func checkECRImage(filePath, latestHash, branch string) error {
-	dockerImageName, err := helpers.ExtractDockerImageName(filePath)
+	fileContents, err := os.ReadFile(filePath)
 	if err != nil {
 		return err
 	}
 
-	if dockerImageName == "" {
+	matches := imageName.FindSubmatch(fileContents)
+	if len(matches) != 2 {
 		return cher.New("invalid_docker_image_name", nil)
 	}
 
-	return findBuildInECR(dockerImageName, latestHash, branch)
+	dockerImageName := matches[1]
+
+	return findBuildInECR(string(dockerImageName), latestHash, branch)
 }
 
 func findBuildInECR(dockerImageName, latestHash, branch string) error {
@@ -282,71 +336,6 @@ func findBuildInECR(dockerImageName, latestHash, branch string) error {
 
 	if len(images.Images) != 1 {
 		log.Warn("Cannot find image in ECR!")
-	}
-
-	return nil
-}
-
-// updateAllServices discovers and updates all service files in the given environment
-func (a App) updateAllServices(repoPath string, req *parsers.Params, env string, updatedFiles *[]string, goOnly, jsOnly bool) error {
-	// Get the path for services in this environment
-	servicePath := path.Join(repoPath, req.System, env, "service")
-
-	// Read all files in the service directory
-	files, err := os.ReadDir(servicePath)
-	if err != nil {
-		// If the service directory doesn't exist, that's okay - just return
-		if os.IsNotExist(err) {
-			log.Debugf("No service directory found for %s/%s, skipping", req.System, env)
-			return nil
-		}
-		return fmt.Errorf("failed to read service directory %s: %w", servicePath, err)
-	}
-
-	for _, file := range files {
-		if file.IsDir() {
-			continue
-		}
-
-		// Skip non-service files (like _base.json, _default.json)
-		if strings.HasPrefix(file.Name(), "_") {
-			log.Debugf("Skipping system file %s", file.Name())
-			continue
-		}
-
-		fullPath := path.Join(servicePath, file.Name())
-
-		// Apply service filtering based on flags (only if filters are set)
-		if goOnly || jsOnly {
-			shouldUpdate, err := helpers.ShouldUpdateService(fullPath, goOnly, jsOnly)
-			if err != nil {
-				return fmt.Errorf("failed to check service filter for %s: %w", file.Name(), err)
-			}
-
-			if !shouldUpdate {
-				log.Debugf("Skipping service %s due to filtering", file.Name())
-				continue
-			}
-		}
-
-		// Check ECR image
-		err := checkECRImage(fullPath, req.Commit, req.Branch)
-		if err != nil {
-			e := errors.Wrap(err, "ecr")
-			log.Warn(e)
-		}
-
-		// Update the service configuration
-		changed, err := a.AddToConfig(fullPath, req.Branch, req.Commit)
-		if err != nil {
-			return fmt.Errorf("add to config for %s: %w", file.Name(), err)
-		}
-
-		if changed {
-			shorthandPath := path.Join(req.System, env, "service", file.Name())
-			*updatedFiles = append(*updatedFiles, shorthandPath)
-			log.Infof("Updated service %s", file.Name())
-		}
 	}
 
 	return nil

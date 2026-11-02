@@ -31,3 +31,36 @@ func Float64(v float64) *float64 {
 func Time(v time.Time) *time.Time {
 	return &v
 }
+
+// Equal returns true if the two parameters are both nil or are pointers to the same value. Provides a type-safe generic
+// alternative to reflect.DeepEqual that ensures both parameters are pointers to the same comparable type.
+func Equal[T comparable](a *T, b *T) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+
+	return *a == *b
+}
+
+// Copy returns nil if the given pointer is nil, otherwise it copies the pointed-to value into a new variable and
+// returns a pointer to that copy. This is useful when assigning pointer fields between structs so that mutating one
+// struct does not affect the other.
+func Copy[T any](v *T) *T {
+	if v == nil {
+		return nil
+	}
+
+	c := *v
+	return &c
+}
+
+// Value returns the pointed-to value, or the zero value if the pointer is nil. Provides the symmetric counterpart to
+// Ptr for safely dereferencing optional values.
+func Value[T any](p *T) T {
+	if p == nil {
+		var zero T
+		return zero
+	}
+
+	return *p
+}

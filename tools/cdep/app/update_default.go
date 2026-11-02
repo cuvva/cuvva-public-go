@@ -6,21 +6,18 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/cuvva/cuvva-public-go/lib/slicecontains"
 	"github.com/cuvva/cuvva-public-go/tools/cdep"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/git"
-	"github.com/cuvva/cuvva-public-go/tools/cdep/helpers"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/parsers"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/paths"
-	gogit "github.com/go-git/go-git/v5"
 	log "github.com/sirupsen/logrus"
 )
 
-
-
-func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChecks []string, goOnly, jsOnly bool) error {
+func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChecks []string) error {
 	log.Info("getting latest commit hash")
 
 	if req.Commit == "" {
@@ -30,6 +27,11 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 		}
 
 		req.Commit = latestHash
+	}
+
+	// Validate commit hash is a full 40-character hash, not a short hash or branch name
+	if err := cdep.ValidateCommitHash(req.Commit); err != nil {
+		return err
 	}
 
 	repoPath, err := paths.GetConfigRepo()
@@ -44,27 +46,20 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 		return err
 	}
 
-	log.Info("opening config repo")
+	log.Info("checking config repo")
 
-	configRepo, err := gogit.PlainOpen(repoPath)
-	if err != nil {
-		return cher.New("git_repo_error", cher.M{
-			"error": err,
-		})
-	}
-
-	_, err = git.CheckRepo(configRepo)
+	_, err = git.CheckRepo(repoPath)
 	if err != nil {
 		return err
 	}
 
-	ref, err := configRepo.Head()
+	ref, err := exec.CommandContext(ctx, "git", "-C", repoPath, "symbolic-ref", "HEAD").Output()
 	if err != nil {
 		return err
 	}
 
 	defaultRef := fmt.Sprintf("refs/heads/%s", cdep.DefaultBranch)
-	if ref.Name().String() != defaultRef {
+	if strings.TrimSpace(string(ref)) != defaultRef {
 		return cher.New("config_not_on_default", nil)
 	}
 
@@ -75,12 +70,7 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 		return err
 	}
 
-	wt, err := configRepo.Worktree()
-	if err != nil {
-		return err
-	}
-
-	err = git.CheckWorkingCopy(wt)
+	err = git.CheckWorkingCopy(repoPath)
 	if err != nil {
 		if !slicecontains.String(overruleChecks, "working_copy_dirty") {
 			return err
@@ -119,21 +109,6 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 
 				fullPath := path.Join(p, file.Name())
 
-				// Apply service filtering based on flags (skip filtering for _base.json)
-				if file.Name() != "_base.json" {
-					shouldUpdate, err := helpers.ShouldUpdateService(fullPath, goOnly, jsOnly)
-					if err != nil {
-						return err
-					}
-
-					if !shouldUpdate {
-						log.Debugf("Skipping service %s due to filtering", file.Name())
-						continue
-					}
-				} else {
-					log.Debugf("Processing base configuration file %s (skipping docker image filtering)", file.Name())
-				}
-
 				changed, err := a.AddToConfig(fullPath, req.Branch, req.Commit)
 				if err != nil {
 					return err
@@ -165,14 +140,14 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 
 	for _, p := range updatedFiles {
 		log.Infof("adding %s to commit", p)
-		_, err := wt.Add(p)
-		if err != nil {
+		if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "add", p).CombinedOutput(); err != nil {
+			fmt.Println(string(out))
 			return err
 		}
 	}
 
-	_, err = wt.Commit(commitMessage, &gogit.CommitOptions{})
-	if err != nil {
+	if out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "commit", "-m", commitMessage).CombinedOutput(); err != nil {
+		fmt.Println(string(out))
 		return err
 	}
 
