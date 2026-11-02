@@ -78,7 +78,9 @@ Flags are:
 
 Specifically for fast forwarding the default commit on an environment, or all of them.
 
-This command will find all services on the `master` branch and remove that from the individual config of that service, and instead update `_default.json` to the latest commit hash.
+This command sets every config file of that type in the environment, including `_base.json`, to
+`master` at the latest commit (or the one given with `-c`). For services, files whose build isn't in
+ECR yet are skipped; see [Only services whose build is ready](#only-services-whose-build-is-ready).
 
 `cdep update-default {type} {env|all}`
 
@@ -86,6 +88,13 @@ For example
 
 - `cdep update-default lambdas avocado`
 - `cdep update-default services all`
+- `cdep update-default services avocado -c <40-char-hash>`
+
+Flags are:
+
+- `--prod`: work on the prod system, where `nonprod` is the default
+- `--commit {hash}` (`-c`): the full commit hash to deploy, where the latest `master` commit is the default
+- `--force`: deploy services even if their build isn't in ECR yet, or ECR can't be checked
 
 ### Only services whose build is ready
 
@@ -115,6 +124,9 @@ The Go services go out now; running the command again later deploys the rest.
 
 `--dry-run` shows what would be updated and skipped without committing anything. `--force` deploys
 everything regardless, including when ECR can't be reached.
+
+Because of this check, deploying services needs AWS credentials that can read ECR (the same ones
+you use for prod deploys). Without them cdep stops with `ecr_unavailable`.
 
 How cdep finds a service's image:
 
