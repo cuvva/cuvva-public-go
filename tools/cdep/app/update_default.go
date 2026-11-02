@@ -89,7 +89,19 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 	}
 
 	updatedFiles := []string{}
-	ecr := newECRChecker(req.Commit, req.Branch)
+
+	var plans map[string]servicePlan
+
+	if req.Type == "service" {
+		builds := newBuildChecker(req.Commit, req.Branch, req.Force)
+
+		plans, err = builds.Plan(envs, func(env string) ([]serviceFile, error) {
+			return listServiceFiles(path.Join(repoPath, req.System, env, req.Type), true)
+		}, false)
+		if err != nil {
+			return err
+		}
+	}
 
 	log.Info("editing json files")
 
@@ -97,16 +109,7 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 		dir := path.Join(repoPath, req.System, env, req.Type)
 
 		if req.Type == "service" {
-			files, err := listServiceFiles(dir, true)
-			if err != nil {
-				return err
-			}
-
-			selected, skipped := filterServiceFiles(env, req.Only, files)
-
-			for _, f := range selected {
-				ecr.Check(f)
-
+			for _, f := range plans[env].Selected {
 				changed, err := a.AddToConfig(f.Path, req.Branch, req.Commit)
 				if err != nil {
 					return err
@@ -116,7 +119,7 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 					updatedFiles = append(updatedFiles, path.Join(req.System, env, req.Type, f.Name()))
 
 					if f.IsEnvFile() {
-						warnInheritedVersions(env, f, skipped)
+						warnInheritedVersions(env, f, plans[env].Skipped)
 					}
 				}
 			}

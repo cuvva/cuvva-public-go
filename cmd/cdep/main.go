@@ -27,6 +27,18 @@ func main() {
 				outStr = fmt.Sprintf("%sPath: %s\n", outStr, a)
 			}
 
+			if image, ok := v.Meta["image"]; ok {
+				if tag, ok := v.Meta["tag"]; ok {
+					outStr = fmt.Sprintf("%sImage: %s:%s\n", outStr, image, tag)
+				} else {
+					outStr = fmt.Sprintf("%sImage: %s\n", outStr, image)
+				}
+			}
+
+			if a, ok := v.Meta["error"]; ok {
+				outStr = fmt.Sprintf("%sCause: %s\n", outStr, a)
+			}
+
 			if a, ok := v.Meta["allowed"]; ok {
 				if allowedOptions, ok := a.([]string); ok {
 					outStr = fmt.Sprintf("%s\nAllowed options:\n", outStr)

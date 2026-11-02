@@ -17,9 +17,9 @@ func TestParseAll(t *testing.T) {
 	}
 
 	p.Branch = "master"
-	p.Only = "go"
+	p.Force = true
 
-	if got, want := p.String("update"), "update service avocado all --go-only"; got != want {
+	if got, want := p.String("update"), "update service avocado all --force"; got != want {
 		t.Fatalf("String: got %q, want %q", got, want)
 	}
 }

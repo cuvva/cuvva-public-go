@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/cuvva/cuvva-public-go/tools/cdep"
+	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/cuvva/cuvva-public-go/tools/cdep/paths"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -42,22 +42,6 @@ func (f serviceFile) Service() string {
 // _base.yaml, ...) rather than the config of a single service.
 func (f serviceFile) IsEnvFile() bool {
 	return strings.HasPrefix(f.Name(), "_")
-}
-
-// Language reports which pipeline builds the file's image, or "" when the image
-// is unknown.
-func (f serviceFile) Language() string {
-	if f.Image == "" {
-		return ""
-	}
-
-	return cdep.LanguageForImage(f.Image)
-}
-
-// Matches reports whether the file should be updated for the given language
-// filter. An empty filter matches every file.
-func (f serviceFile) Matches(only string) bool {
-	return only == "" || f.Language() == only
 }
 
 // definesOwnVersion reports whether the file pins its own commit or image tag,
@@ -213,39 +197,9 @@ func namedServiceFiles(repoPath, system, env string, services []string) ([]servi
 	return files, nil
 }
 
-// filterServiceFiles splits files into those matching the language filter and
-// those skipped, and tells the user which is which.
-func filterServiceFiles(env, only string, files []serviceFile) (selected, skipped []serviceFile) {
-	for _, f := range files {
-		if f.Matches(only) {
-			selected = append(selected, f)
-		} else {
-			skipped = append(skipped, f)
-		}
-	}
-
-	if only == "" {
-		return selected, skipped
-	}
-
-	log.Infof("%s: updating %d %s service(s): %s", env, len(selected), only, joinServiceNames(selected))
-
-	if len(skipped) > 0 {
-		log.Infof("%s: skipping %d service(s) not built by %s: %s", env, len(skipped), only, joinServiceNames(skipped))
-	}
-
-	for _, f := range skipped {
-		if f.Image == "" {
-			log.Warnf("%s: could not work out the docker image of %s, so it was skipped; check its docker_image_name or image.repository", env, f.Name())
-		}
-	}
-
-	return selected, skipped
-}
-
 // warnInheritedVersions warns when updating an env-wide _base file would also
-// move services the language filter skipped, because they take their commit
-// from that _base file rather than pinning their own.
+// move services that were skipped because their build is missing, as they take
+// their commit from that _base file rather than pinning their own.
 func warnInheritedVersions(env string, updatedBase serviceFile, skipped []serviceFile) {
 	inheriting := []serviceFile{}
 
@@ -263,7 +217,7 @@ func warnInheritedVersions(env string, updatedBase serviceFile, skipped []servic
 		return
 	}
 
-	log.Warnf("%s: %s was updated and these skipped services inherit their commit from it, so they will move too: %s", env, updatedBase.Name(), joinServiceNames(inheriting))
+	log.Warnf("%s: %s was updated and these services inherit their commit from it, so they will move too even though their build isn't ready: %s", env, updatedBase.Name(), joinServiceNames(inheriting))
 }
 
 func joinServiceNames(files []serviceFile) string {
@@ -281,41 +235,165 @@ func joinServiceNames(files []serviceFile) string {
 	return strings.Join(names, ", ")
 }
 
-// ecrChecker checks each docker image has a build for the commit being
-// deployed. Most services share an image (go-services, js-services, ...), so
-// each image is only looked up once per run.
-type ecrChecker struct {
-	commit  string
-	branch  string
-	checked map[string]struct{}
-	find    func(image, commit, branch string) error
+// buildChecker decides which services can be deployed, by checking CI has
+// pushed each service's image for the commit to ECR. Most services share an
+// image (go-services, js-services, ...), so each image is looked up once per run.
+type buildChecker struct {
+	commit string
+	branch string
+	force  bool
+	ready  map[string]bool
+	errs   map[string]error
+	find   func(image, commit, branch string) (bool, error)
 }
 
-func newECRChecker(commit, branch string) *ecrChecker {
-	return &ecrChecker{
-		commit:  commit,
-		branch:  branch,
-		checked: map[string]struct{}{},
-		find:    findBuildInECR,
+func newBuildChecker(commit, branch string, force bool) *buildChecker {
+	return &buildChecker{
+		commit: commit,
+		branch: branch,
+		force:  force,
+		ready:  map[string]bool{},
+		errs:   map[string]error{},
+		find:   findBuildInECR,
 	}
 }
 
-func (c *ecrChecker) Check(f serviceFile) {
-	if f.Image == "" {
-		if !f.IsEnvFile() {
-			log.Warnf("could not work out the docker image of %s, skipping the ECR check", f.Name())
+// Ready reports whether the image has been built for the commit.
+func (c *buildChecker) Ready(image string) (bool, error) {
+	if ready, ok := c.ready[image]; ok {
+		return ready, c.errs[image]
+	}
+
+	ready, err := c.find(image, c.commit, c.branch)
+	if err != nil {
+		c.ready[image] = false
+		c.errs[image] = err
+
+		if c.force {
+			log.Warnf("could not check ECR for %s, deploying anyway as --force was given: %s", image, err)
 		}
 
-		return
+		return false, err
 	}
 
-	if _, ok := c.checked[f.Image]; ok {
-		return
+	if ready {
+		log.Infof("found %s:%s in ECR", image, imageTag(c.branch, c.commit))
+	} else {
+		log.Warnf("%s:%s is not in ECR yet", image, imageTag(c.branch, c.commit))
 	}
 
-	c.checked[f.Image] = struct{}{}
+	c.ready[image] = ready
 
-	if err := c.find(f.Image, c.commit, c.branch); err != nil {
-		log.Warnf("ecr: could not check for a %s build of %s: %s", f.Image, c.commit, err)
+	return ready, nil
+}
+
+// Select returns the files that can be deployed and those skipped because
+// their image has not been built for the commit, or has no image cdep can find.
+// Env-wide files without an image of their own (e.g. a _base.yaml holding only
+// Helm settings) are always selected.
+//
+// When strict is set, as for services named on the command line, a missing
+// build is an error rather than a skip. With force, every file is selected and
+// problems are only warned about.
+func (c *buildChecker) Select(env string, files []serviceFile, strict bool) (selected, skipped []serviceFile, err error) {
+	notBuilt := map[string][]serviceFile{}
+	unknown := []serviceFile{}
+
+	for _, f := range files {
+		if f.Image == "" {
+			if f.IsEnvFile() || c.force {
+				selected = append(selected, f)
+				continue
+			}
+
+			if strict {
+				log.Warnf("could not work out the docker image of %s, so cdep can't check it has been built", f.Name())
+				selected = append(selected, f)
+				continue
+			}
+
+			unknown = append(unknown, f)
+			skipped = append(skipped, f)
+
+			continue
+		}
+
+		ready, err := c.Ready(f.Image)
+		if err != nil {
+			if !c.force {
+				return nil, nil, cher.New("ecr_unavailable", cher.M{"image": f.Image, "error": err.Error()})
+			}
+		}
+
+		if ready || c.force {
+			selected = append(selected, f)
+			continue
+		}
+
+		if strict {
+			return nil, nil, cher.New("build_not_found", cher.M{
+				"path":  f.Path,
+				"image": f.Image,
+				"tag":   imageTag(c.branch, c.commit),
+			})
+		}
+
+		notBuilt[f.Image] = append(notBuilt[f.Image], f)
+		skipped = append(skipped, f)
 	}
+
+	images := make([]string, 0, len(notBuilt))
+	for image := range notBuilt {
+		images = append(images, image)
+	}
+
+	sort.Strings(images)
+
+	for _, image := range images {
+		log.Warnf("%s: skipping %d service(s) until %s:%s is built, run cdep again once CI has finished: %s",
+			env, len(notBuilt[image]), image, imageTag(c.branch, c.commit), joinServiceNames(notBuilt[image]))
+	}
+
+	if len(unknown) > 0 {
+		log.Warnf("%s: skipping %d service(s) with no docker image cdep can find (check docker_image_name or image.repository, or pass --force): %s",
+			env, len(unknown), joinServiceNames(unknown))
+	}
+
+	return selected, skipped, nil
+}
+
+// servicePlan is the service files to update in one env, and those skipped.
+type servicePlan struct {
+	Selected []serviceFile
+	Skipped  []serviceFile
+}
+
+// Plan selects the files to update in every env before any are written, so a
+// missing build or an ECR failure stops the run without leaving the config
+// repo half edited.
+func (c *buildChecker) Plan(envs map[string]struct{}, list func(env string) ([]serviceFile, error), strict bool) (map[string]servicePlan, error) {
+	names := make([]string, 0, len(envs))
+	for env := range envs {
+		names = append(names, env)
+	}
+
+	sort.Strings(names)
+
+	plans := map[string]servicePlan{}
+
+	for _, env := range names {
+		files, err := list(env)
+		if err != nil {
+			return nil, fmt.Errorf("list services in %s: %w", env, err)
+		}
+
+		selected, skipped, err := c.Select(env, files, strict)
+		if err != nil {
+			return nil, err
+		}
+
+		plans[env] = servicePlan{Selected: selected, Skipped: skipped}
+	}
+
+	return plans, nil
 }

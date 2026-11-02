@@ -1,9 +1,12 @@
 package app
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/cuvva/cuvva-public-go/lib/cher"
 )
 
 func writeFiles(t *testing.T, files map[string]string) string {
@@ -35,16 +38,15 @@ func TestResolveServiceFile(t *testing.T) {
 	tests := []struct {
 		file      string
 		wantImage string
-		wantLang  string
 	}{
-		{"_base.json", "go-services", "go"},
-		{"service-own-go.json", "go-services-playwright", "go"},
-		{"service-own-js.json", "js-services", "js"},
-		{"service-inherits.json", "go-services", "go"},
-		{"service-helm.yaml", "js-quote", "js"},
-		{"service-helm-bare.yaml", "", ""},
-		{"_base.yaml", "", ""},
-		{"service-missing.json", "go-services", "go"},
+		{"_base.json", "go-services"},
+		{"service-own-go.json", "go-services-playwright"},
+		{"service-own-js.json", "js-services"},
+		{"service-inherits.json", "go-services"},
+		{"service-helm.yaml", "js-quote"},
+		{"service-helm-bare.yaml", ""},
+		{"_base.yaml", ""},
+		{"service-missing.json", "go-services"},
 	}
 
 	for _, tt := range tests {
@@ -57,15 +59,11 @@ func TestResolveServiceFile(t *testing.T) {
 			if f.Image != tt.wantImage {
 				t.Errorf("image: got %q, want %q", f.Image, tt.wantImage)
 			}
-
-			if f.Language() != tt.wantLang {
-				t.Errorf("language: got %q, want %q", f.Language(), tt.wantLang)
-			}
 		})
 	}
 }
 
-func TestListAndFilterServiceFiles(t *testing.T) {
+func TestListServiceFiles(t *testing.T) {
 	dir := writeFiles(t, map[string]string{
 		"_base.json":         `{"docker_image_name": "go-services", "commit": "` + goCommit + `"}`,
 		"service-sms.json":   `{}`,
@@ -79,8 +77,8 @@ func TestListAndFilterServiceFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(files) != 3 {
-		t.Fatalf("got %d files without env files, want 3: %v", len(files), files)
+	if got, want := joinServiceNames(files), "quote, sms, web"; got != want {
+		t.Fatalf("without env files: got %q, want %q", got, want)
 	}
 
 	files, err = listServiceFiles(dir, true)
@@ -88,32 +86,8 @@ func TestListAndFilterServiceFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(files) != 4 {
-		t.Fatalf("got %d files with env files, want 4: %v", len(files), files)
-	}
-
-	tests := []struct {
-		only         string
-		wantSelected string
-		wantSkipped  string
-	}{
-		{"", "_base, quote, sms, web", "(none)"},
-		{"go", "_base, sms, web", "quote"},
-		{"js", "quote", "_base, sms, web"},
-	}
-
-	for _, tt := range tests {
-		t.Run("only="+tt.only, func(t *testing.T) {
-			selected, skipped := filterServiceFiles("avocado", tt.only, files)
-
-			if got := joinServiceNames(selected); got != tt.wantSelected {
-				t.Errorf("selected: got %q, want %q", got, tt.wantSelected)
-			}
-
-			if got := joinServiceNames(skipped); got != tt.wantSkipped {
-				t.Errorf("skipped: got %q, want %q", got, tt.wantSkipped)
-			}
-		})
+	if got, want := joinServiceNames(files), "_base, quote, sms, web"; got != want {
+		t.Fatalf("with env files: got %q, want %q", got, want)
 	}
 }
 
@@ -148,25 +122,114 @@ func TestDefinesOwnVersion(t *testing.T) {
 	}
 }
 
-func TestECRCheckerLooksUpEachImageOnce(t *testing.T) {
-	lookups := map[string]int{}
-
-	c := newECRChecker(goCommit, "master")
-	c.find = func(image, commit, branch string) error {
+// fakeBuilds returns a buildChecker that knows which images have been built,
+// and counts how often each image is looked up.
+func fakeBuilds(force bool, built map[string]bool, lookups map[string]int) *buildChecker {
+	c := newBuildChecker(goCommit, "master", force)
+	c.find = func(image, commit, branch string) (bool, error) {
 		lookups[image]++
-		return nil
+
+		if image == "broken" {
+			return false, errors.New("ecr is down")
+		}
+
+		return built[image], nil
 	}
 
-	for _, f := range []serviceFile{
-		{Path: "a.json", Image: "go-services"},
-		{Path: "b.json", Image: "go-services"},
-		{Path: "c.json", Image: "js-services"},
-		{Path: "d.json", Image: ""},
-	} {
-		c.Check(f)
+	return c
+}
+
+var selectFiles = []serviceFile{
+	{Path: "_base.json", Image: "go-services"},
+	{Path: "_base.yaml"},
+	{Path: "service-sms.json", Image: "go-services"},
+	{Path: "service-auth.json", Image: "go-services"},
+	{Path: "service-agent.json", Image: "go-services-playwright"},
+	{Path: "service-quote.json", Image: "js-quote"},
+	{Path: "service-mystery.json"},
+}
+
+func TestSelectSkipsServicesWithoutABuild(t *testing.T) {
+	lookups := map[string]int{}
+	c := fakeBuilds(false, map[string]bool{"go-services": true, "js-quote": true}, lookups)
+
+	selected, skipped, err := c.Select("avocado", selectFiles, false)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	if lookups["go-services"] != 1 || lookups["js-services"] != 1 || len(lookups) != 2 {
-		t.Fatalf("unexpected lookups: %v", lookups)
+	if got, want := joinServiceNames(selected), "_base, _base, auth, quote, sms"; got != want {
+		t.Errorf("selected: got %q, want %q", got, want)
+	}
+
+	if got, want := joinServiceNames(skipped), "agent, mystery"; got != want {
+		t.Errorf("skipped: got %q, want %q", got, want)
+	}
+
+	// each image is looked up once, however many services share it
+	if lookups["go-services"] != 1 || lookups["js-quote"] != 1 || lookups["go-services-playwright"] != 1 || len(lookups) != 3 {
+		t.Errorf("unexpected lookups: %v", lookups)
+	}
+}
+
+func TestSelectStrictFailsOnMissingBuild(t *testing.T) {
+	c := fakeBuilds(false, map[string]bool{"go-services": true}, map[string]int{})
+
+	_, _, err := c.Select("avocado", []serviceFile{{Path: "service-agent.json", Image: "go-services-playwright"}}, true)
+	if code := cher.Coerce(err).Code; code != "build_not_found" {
+		t.Fatalf("got %q, want build_not_found (err: %v)", code, err)
+	}
+}
+
+func TestSelectFailsWhenECRIsUnavailable(t *testing.T) {
+	c := fakeBuilds(false, nil, map[string]int{})
+
+	_, _, err := c.Select("avocado", []serviceFile{{Path: "service-x.json", Image: "broken"}}, false)
+	if code := cher.Coerce(err).Code; code != "ecr_unavailable" {
+		t.Fatalf("got %q, want ecr_unavailable (err: %v)", code, err)
+	}
+}
+
+func TestSelectForceSelectsEverything(t *testing.T) {
+	files := append(selectFiles, serviceFile{Path: "service-x.json", Image: "broken"}, serviceFile{Path: "service-y.json", Image: "broken"})
+	lookups := map[string]int{}
+	c := fakeBuilds(true, nil, lookups)
+
+	selected, skipped, err := c.Select("avocado", files, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(selected) != len(files) || len(skipped) != 0 {
+		t.Fatalf("got %d selected and %d skipped, want all %d selected", len(selected), len(skipped), len(files))
+	}
+
+	if lookups["broken"] != 1 {
+		t.Fatalf("failed lookup retried %d times, want 1", lookups["broken"])
+	}
+}
+
+func TestPlanChecksEveryEnvBeforeWriting(t *testing.T) {
+	c := fakeBuilds(false, map[string]bool{"go-services": true}, map[string]int{})
+
+	envs := map[string]struct{}{"avocado": {}, "basil": {}}
+	listed := []string{}
+
+	_, err := c.Plan(envs, func(env string) ([]serviceFile, error) {
+		listed = append(listed, env)
+
+		if env == "basil" {
+			return []serviceFile{{Path: "service-quote.json", Image: "js-quote"}}, nil
+		}
+
+		return []serviceFile{{Path: "service-sms.json", Image: "go-services"}}, nil
+	}, true)
+
+	if code := cher.Coerce(err).Code; code != "build_not_found" {
+		t.Fatalf("got %q, want build_not_found (err: %v)", code, err)
+	}
+
+	if len(listed) != 2 {
+		t.Fatalf("listed %v, want both envs", listed)
 	}
 }

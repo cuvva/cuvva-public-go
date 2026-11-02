@@ -15,9 +15,9 @@ type Params struct {
 	// AllItems is set when "all" was given instead of a list of services, and
 	// selects every service in the environment.
 	AllItems bool
-	// Only limits services to those built by one pipeline: cdep.LanguageGo or
-	// cdep.LanguageJS. Empty means every service.
-	Only    string
+	// Force deploys services even when their image has not been built for the
+	// commit, or ECR cannot be checked.
+	Force   bool
 	Message string
 }
 
@@ -36,8 +36,8 @@ func (p Params) String(command string) (out string) {
 		out = fmt.Sprintf("%s %s", out, itemsStr)
 	}
 
-	if p.Only != "" {
-		out = fmt.Sprintf("%s --%s-only", out, p.Only)
+	if p.Force {
+		out = fmt.Sprintf("%s --force", out)
 	}
 
 	if p.Branch != "master" {

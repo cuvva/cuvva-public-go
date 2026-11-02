@@ -43,7 +43,7 @@ func TestUpdateAgentcoreGuards(t *testing.T) {
 	}
 }
 
-// "all" and the language filters only mean something for services; both
+// "all" only means something for services; both
 // commands reject them for other types before touching git, config or AWS.
 func TestServiceSelectionGuards(t *testing.T) {
 	tests := []struct {
@@ -51,11 +51,6 @@ func TestServiceSelectionGuards(t *testing.T) {
 		req  *parsers.Params
 		want string
 	}{
-		{
-			name: "filter on lambdas",
-			req:  &parsers.Params{Type: "lambda", System: "nonprod", Environment: "avocado", Branch: "master", Only: "go", Items: []string{"a"}},
-			want: "filter_requires_services",
-		},
 		{
 			name: "all on terra",
 			req:  &parsers.Params{Type: "terra", System: "nonprod", Environment: "avocado", Branch: "master", AllItems: true},

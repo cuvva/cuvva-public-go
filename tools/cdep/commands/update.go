@@ -26,7 +26,7 @@ func init() {
 	UpdateCmd.Flags().StringSliceP("overrule-checks", "", []string{}, "Overrule checks the tool does")
 	UpdateCmd.Flags().StringP("message", "m", "", "More details about the deployment")
 
-	addLanguageFlags(UpdateCmd)
+	UpdateCmd.Flags().Bool("force", false, "Deploy services even if their image hasn't been built for the commit yet, or ECR can't be checked")
 
 	UpdateCmd.Flags().MarkHidden("overrule-checks")
 
@@ -49,8 +49,8 @@ var UpdateCmd = &cobra.Command{
 		"update service avocado sms email -b extra-logging",
 		"update service avocado sms email -b extra-logging -c f1ec178befe6ed26ce9cec0aa419c763c203bc92",
 		"update service all sms email -c 1ed6fd7450031a5240584f8bbe8ec527f9020b5b",
-		"update service avocado all --go-only",
-		"update service all all --js-only -b my-feature",
+		"update service avocado all",
+		"update service all all -b my-feature",
 		"update service prod email --prod",
 		"update lambda basil ltm-proxy",
 		"update cloudfront prod website --prod",
@@ -87,7 +87,7 @@ var UpdateCmd = &cobra.Command{
 			return err
 		}
 
-		only, err := languageFilter(cmd)
+		force, err := cmd.Flags().GetBool("force")
 		if err != nil {
 			return err
 		}
@@ -97,7 +97,7 @@ var UpdateCmd = &cobra.Command{
 			return err
 		}
 
-		params.Only = only
+		params.Force = force
 
 		// agentcore config tracks the "main" branch rather than "master";
 		// default to it unless the user explicitly passed -b.

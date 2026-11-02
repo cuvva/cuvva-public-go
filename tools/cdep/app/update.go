@@ -129,7 +129,23 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 		return fmt.Errorf("load envs: %w", err)
 	}
 
-	ecr := newECRChecker(req.Commit, req.Branch)
+	var plans map[string]servicePlan
+
+	if req.Type == "service" {
+		builds := newBuildChecker(req.Commit, req.Branch, req.Force)
+
+		plans, err = builds.Plan(envs, func(env string) ([]serviceFile, error) {
+			if req.AllItems {
+				// Every service in the env; env-wide _base files are left to update-default.
+				return listServiceFiles(path.Join(repoPath, req.System, env, "service"), false)
+			}
+
+			return namedServiceFiles(repoPath, req.System, env, req.Items)
+		}, !req.AllItems) // named services must have a build; "all" skips the ones that don't
+		if err != nil {
+			return err
+		}
+	}
 
 	var envNames []string
 	for env := range envs {
@@ -137,23 +153,7 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 
 		switch req.Type {
 		case "service":
-			var files []serviceFile
-
-			if req.AllItems {
-				// Every service in the env; env-wide _base files are left to update-default.
-				files, err = listServiceFiles(path.Join(repoPath, req.System, env, "service"), false)
-			} else {
-				files, err = namedServiceFiles(repoPath, req.System, env, req.Items)
-			}
-			if err != nil {
-				return fmt.Errorf("list services: %w", err)
-			}
-
-			selected, _ := filterServiceFiles(env, req.Only, files)
-
-			for _, f := range selected {
-				ecr.Check(f)
-
+			for _, f := range plans[env].Selected {
 				changed, err := a.AddToConfig(f.Path, req.Branch, req.Commit)
 				if err != nil {
 					return fmt.Errorf("add to config: %w", err)
@@ -292,60 +292,50 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 	return nil
 }
 
-func findBuildInECR(dockerImageName, latestHash, branch string) error {
+// imageTag is the tag CI gives the image it builds for a commit.
+func imageTag(branch, commit string) string {
+	prefix := "master"
+	if branch != "master" {
+		prefix = "branch"
+	}
+
+	return fmt.Sprintf("%s-%s", prefix, commit)
+}
+
+// findBuildInECR reports whether CI has pushed the image built for the commit.
+func findBuildInECR(dockerImageName, commit, branch string) (bool, error) {
 	cfg := config.AWS{
 		Region: "eu-west-1",
 	}
 
 	awsSession, err := cfg.Session()
 	if err != nil {
-		return errors.Wrap(err, "aws:")
+		return false, errors.Wrap(err, "aws:")
 	}
 
 	c := ecr.New(awsSession)
-
-	branchName := "master"
-
-	if branch != "master" {
-		branchName = "branch"
-	}
 
 	images, err := c.BatchGetImage(&ecr.BatchGetImageInput{
 		RegistryId:     ptr.String("005717268539"),
 		RepositoryName: ptr.String(dockerImageName),
 		ImageIds: []*ecr.ImageIdentifier{
 			{
-				ImageTag: ptr.String(fmt.Sprintf("%s-%s", branchName, latestHash)),
+				ImageTag: ptr.String(imageTag(branch, commit)),
 			},
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("batch get image: %w", err)
+		return false, fmt.Errorf("batch get image: %w", err)
 	}
 
-	if len(images.Images) != 1 {
-		log.Warnf("Cannot find a %s image for %s-%s in ECR! Has the build finished?", dockerImageName, branchName, latestHash)
-		return nil
-	}
-
-	log.Infof("found %s image for %s-%s in ECR", dockerImageName, branchName, latestHash)
-
-	return nil
+	return len(images.Images) == 1, nil
 }
 
-// validateServiceSelection rejects "all" and the language filters for anything
-// other than services, where they have no meaning.
+// validateServiceSelection rejects "all" for anything other than services,
+// where it has no meaning.
 func validateServiceSelection(req *parsers.Params) error {
-	if req.Type == "service" {
-		return nil
-	}
-
-	if req.AllItems {
+	if req.Type != "service" && req.AllItems {
 		return cher.New("all_requires_services", cher.M{"type": req.Type})
-	}
-
-	if req.Only != "" {
-		return cher.New("filter_requires_services", cher.M{"type": req.Type})
 	}
 
 	return nil
