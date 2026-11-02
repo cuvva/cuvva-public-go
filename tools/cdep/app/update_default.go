@@ -95,7 +95,7 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 	if req.Type == "service" {
 		builds := newBuildChecker(req.Commit, req.Branch, req.Force)
 
-		plans, err = builds.Plan(envs, func(env string) ([]serviceFile, error) {
+		plans, err = builds.Plan(envs, req.Images, func(env string) ([]serviceFile, error) {
 			return listServiceFiles(path.Join(repoPath, req.System, env, req.Type), true)
 		}, false)
 		if err != nil {

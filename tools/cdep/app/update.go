@@ -134,7 +134,7 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 	if req.Type == "service" {
 		builds := newBuildChecker(req.Commit, req.Branch, req.Force)
 
-		plans, err = builds.Plan(envs, func(env string) ([]serviceFile, error) {
+		plans, err = builds.Plan(envs, req.Images, func(env string) ([]serviceFile, error) {
 			if req.AllItems {
 				// Every service in the env; env-wide _base files are left to update-default.
 				return listServiceFiles(path.Join(repoPath, req.System, env, "service"), false)
@@ -331,11 +331,19 @@ func findBuildInECR(dockerImageName, commit, branch string) (bool, error) {
 	return len(images.Images) == 1, nil
 }
 
-// validateServiceSelection rejects "all" for anything other than services,
-// where it has no meaning.
+// validateServiceSelection rejects "all" and --image for anything other than
+// services, where they have no meaning.
 func validateServiceSelection(req *parsers.Params) error {
-	if req.Type != "service" && req.AllItems {
+	if req.Type == "service" {
+		return nil
+	}
+
+	if req.AllItems {
 		return cher.New("all_requires_services", cher.M{"type": req.Type})
+	}
+
+	if len(req.Images) > 0 {
+		return cher.New("image_requires_services", cher.M{"type": req.Type})
 	}
 
 	return nil

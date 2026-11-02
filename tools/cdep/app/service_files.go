@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"slices"
 	"sort"
 	"strings"
 
@@ -198,8 +199,9 @@ func namedServiceFiles(repoPath, system, env string, services []string) ([]servi
 }
 
 // warnInheritedVersions warns when updating an env-wide _base file would also
-// move services that were skipped because their build is missing, as they take
-// their commit from that _base file rather than pinning their own.
+// move services that were skipped (for --image, or because their build is
+// missing), as they take their commit from that _base file rather than pinning
+// their own.
 func warnInheritedVersions(env string, updatedBase serviceFile, skipped []serviceFile) {
 	inheriting := []serviceFile{}
 
@@ -217,7 +219,7 @@ func warnInheritedVersions(env string, updatedBase serviceFile, skipped []servic
 		return
 	}
 
-	log.Warnf("%s: %s was updated and these services inherit their commit from it, so they will move too even though their build isn't ready: %s", env, updatedBase.Name(), joinServiceNames(inheriting))
+	log.Warnf("%s: %s was updated and these services inherit their commit from it, so they will move too even though they were skipped: %s", env, updatedBase.Name(), joinServiceNames(inheriting))
 }
 
 func joinServiceNames(files []serviceFile) string {
@@ -368,10 +370,33 @@ type servicePlan struct {
 	Skipped  []serviceFile
 }
 
+// filterImages keeps the files that run one of images, and tells the user which
+// services were left out. An empty list keeps every file.
+func filterImages(env string, files []serviceFile, images []string) (kept, skipped []serviceFile) {
+	if len(images) == 0 {
+		return files, nil
+	}
+
+	for _, f := range files {
+		if slices.Contains(images, f.Image) {
+			kept = append(kept, f)
+		} else {
+			skipped = append(skipped, f)
+		}
+	}
+
+	log.Infof("%s: updating %d service(s) running %s: %s", env, len(kept), strings.Join(images, ", "), joinServiceNames(kept))
+
+	return kept, skipped
+}
+
 // Plan selects the files to update in every env before any are written, so a
-// missing build or an ECR failure stops the run without leaving the config
-// repo half edited.
-func (c *buildChecker) Plan(envs map[string]struct{}, list func(env string) ([]serviceFile, error), strict bool) (map[string]servicePlan, error) {
+// missing build, an ECR failure or a mistyped --image stops the run without
+// leaving the config repo half edited.
+//
+// images limits the run to services running those docker images; empty means
+// every service.
+func (c *buildChecker) Plan(envs map[string]struct{}, images []string, list func(env string) ([]serviceFile, error), strict bool) (map[string]servicePlan, error) {
 	names := make([]string, 0, len(envs))
 	for env := range envs {
 		names = append(names, env)
@@ -379,7 +404,8 @@ func (c *buildChecker) Plan(envs map[string]struct{}, list func(env string) ([]s
 
 	sort.Strings(names)
 
-	plans := map[string]servicePlan{}
+	listed := map[string][]serviceFile{}
+	seenImages := map[string]struct{}{}
 
 	for _, env := range names {
 		files, err := list(env)
@@ -387,12 +413,40 @@ func (c *buildChecker) Plan(envs map[string]struct{}, list func(env string) ([]s
 			return nil, fmt.Errorf("list services in %s: %w", env, err)
 		}
 
-		selected, skipped, err := c.Select(env, files, strict)
+		for _, f := range files {
+			if f.Image != "" {
+				seenImages[f.Image] = struct{}{}
+			}
+		}
+
+		listed[env] = files
+	}
+
+	// Catch a mistyped --image before looking anything up in ECR.
+	for _, image := range images {
+		if _, ok := seenImages[image]; !ok {
+			allowed := make([]string, 0, len(seenImages))
+			for seen := range seenImages {
+				allowed = append(allowed, seen)
+			}
+
+			sort.Strings(allowed)
+
+			return nil, cher.New("unknown_image", cher.M{"image": image, "allowed": allowed})
+		}
+	}
+
+	plans := map[string]servicePlan{}
+
+	for _, env := range names {
+		files, notRequested := filterImages(env, listed[env], images)
+
+		selected, notBuilt, err := c.Select(env, files, strict)
 		if err != nil {
 			return nil, err
 		}
 
-		plans[env] = servicePlan{Selected: selected, Skipped: skipped}
+		plans[env] = servicePlan{Selected: selected, Skipped: append(notRequested, notBuilt...)}
 	}
 
 	return plans, nil

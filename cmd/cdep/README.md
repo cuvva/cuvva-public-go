@@ -22,6 +22,7 @@ For example:
 - `cdep u service avocado -b fix-it sms ltm email web-underwriter`
 - `cdep u service all sms`
 - `cdep u service avocado all -b fix-it` (every service in avocado whose build is ready)
+- `cdep u service avocado all --image go-services -b fix-it` (every service running the go-services image)
 - `cdep u lambda avocado -b fix-it marketing-consent stm-policy-sale`
 - `cdep u service prod ltm --prod`
 - `cdep u service avocado ltm -b fix-it`
@@ -55,6 +56,7 @@ Or with some flags
 
 - `--prod`: work on prod, where `nonprod` is the default
 - `--branch {name}` (`-b`): define a branch to use, where `master` is the default
+- `--image {name}`: only update services running this docker image, see [Choosing services by image](#choosing-services-by-image)
 - `--force`: deploy services even if their build isn't in ECR yet, see [Only services whose build is ready](#only-services-whose-build-is-ready)
 
 ### update-web
@@ -89,12 +91,33 @@ For example
 - `cdep update-default lambdas avocado`
 - `cdep update-default services all`
 - `cdep update-default services avocado -c <40-char-hash>`
+- `cdep update-default services all --image go-services`
 
 Flags are:
 
 - `--prod`: work on the prod system, where `nonprod` is the default
 - `--commit {hash}` (`-c`): the full commit hash to deploy, where the latest `master` commit is the default
+- `--image {name}`: only update services running this docker image (repeat for more than one)
 - `--force`: deploy services even if their build isn't in ECR yet, or ECR can't be checked
+
+### Choosing services by image
+
+A change to a shared library usually means redeploying every service built from it. Each service
+runs one docker image, so `--image` picks services by the image they run. It works with `update`
+and `update-default`, for services only.
+
+| You want to... | Run |
+| --- | --- |
+| Move every Go service in avocado to the latest master | `cdep update-default services avocado --image go-services` |
+| Move every JS service in every nonprod env | `cdep update-default services all --image js-services --image js-quote --image js-motor-coverage` |
+| Put every `go-services` service in avocado on your branch | `cdep update service avocado all --image go-services -b my-branch` |
+
+The images in use today are `go-services`, `go-services-playwright`, `js-services`, `js-quote`,
+`js-motor-coverage`, `web-underwriter` and `web-mid`. If you mistype one, cdep stops before
+changing anything and lists the images it found.
+
+Use `--dry-run` first: cdep lists the services it will update and the ones it skipped, per
+environment.
 
 ### Only services whose build is ready
 
@@ -129,7 +152,8 @@ Because of this check, deploying services needs AWS credentials that can read EC
 
 How cdep finds a service's image:
 
-- `docker_image_name` in JSON config, or `image.repository` in YAML config.
+- `docker_image_name` in JSON config, or `image.repository` in YAML config. `--image` matches
+  this name exactly.
 - A service that doesn't set one inherits it from the env's `_base.json` / `_base.yaml`, as it does
   when deployed. A service with no image cdep can find is skipped under `all` and `update-default`.
 - `update-default` treats `_base.json` like any other file: it's updated only when its own image is
@@ -150,10 +174,15 @@ finish, or pass `--force` to deploy anyway.
 cdep couldn't look the builds up in ECR, usually because your AWS credentials have expired. Log in
 again, or pass `--force` to deploy without checking.
 
-### `all_requires_services`
+### `unknown_image`
 
-`all` only works for services. For lambdas, terra and agentcore, list the items, or use
-`update-default` to update every lambda.
+No service in the environment runs the image you passed to `--image`. cdep lists the images it
+found; check the spelling.
+
+### `all_requires_services` / `image_requires_services`
+
+`all` and `--image` only work for services. For lambdas, terra and agentcore, list the items, or
+use `update-default` to update every lambda.
 
 ### `all_must_be_alone`
 

@@ -26,6 +26,7 @@ func init() {
 	UpdateCmd.Flags().StringSliceP("overrule-checks", "", []string{}, "Overrule checks the tool does")
 	UpdateCmd.Flags().StringP("message", "m", "", "More details about the deployment")
 
+	UpdateCmd.Flags().StringSlice("image", nil, "Only update services running this docker image, e.g. go-services (repeat for more than one)")
 	UpdateCmd.Flags().Bool("force", false, "Deploy services even if their image hasn't been built for the commit yet, or ECR can't be checked")
 
 	UpdateCmd.Flags().MarkHidden("overrule-checks")
@@ -51,6 +52,7 @@ var UpdateCmd = &cobra.Command{
 		"update service all sms email -c 1ed6fd7450031a5240584f8bbe8ec527f9020b5b",
 		"update service avocado all",
 		"update service all all -b my-feature",
+		"update service avocado all --image go-services",
 		"update service prod email --prod",
 		"update lambda basil ltm-proxy",
 		"update cloudfront prod website --prod",
@@ -92,12 +94,18 @@ var UpdateCmd = &cobra.Command{
 			return err
 		}
 
+		images, err := cmd.Flags().GetStringSlice("image")
+		if err != nil {
+			return err
+		}
+
 		params, err := parsers.Parse(args, useProd)
 		if err != nil {
 			return err
 		}
 
 		params.Force = force
+		params.Images = images
 
 		// agentcore config tracks the "main" branch rather than "master";
 		// default to it unless the user explicitly passed -b.

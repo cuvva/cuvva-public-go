@@ -15,6 +15,9 @@ type Params struct {
 	// AllItems is set when "all" was given instead of a list of services, and
 	// selects every service in the environment.
 	AllItems bool
+	// Images limits services to those running one of these docker images
+	// (e.g. go-services). Empty means every service.
+	Images []string
 	// Force deploys services even when their image has not been built for the
 	// commit, or ECR cannot be checked.
 	Force   bool
@@ -34,6 +37,10 @@ func (p Params) String(command string) (out string) {
 
 		itemsStr := strings.Join(items, " ")
 		out = fmt.Sprintf("%s %s", out, itemsStr)
+	}
+
+	for _, image := range p.Images {
+		out = fmt.Sprintf("%s --image %s", out, image)
 	}
 
 	if p.Force {

@@ -25,6 +25,7 @@ func init() {
 	UpdateDefaultCmd.Flags().StringP("message", "m", "", "More details about the deployment")
 	UpdateDefaultCmd.Flags().StringP("commit", "c", "", "Commit hash to use")
 
+	UpdateDefaultCmd.Flags().StringSlice("image", nil, "Only update services running this docker image, e.g. go-services (repeat for more than one)")
 	UpdateDefaultCmd.Flags().Bool("force", false, "Deploy services even if their image hasn't been built for the commit yet, or ECR can't be checked")
 
 	UpdateDefaultCmd.Flags().MarkHidden("overrule-checks")
@@ -46,6 +47,8 @@ var UpdateDefaultCmd = &cobra.Command{
 	Example: strings.Join([]string{
 		"update-default services avocado",
 		"update-default services avocado -c f1ec178befe6ed26ce9cec0aa419c763c203bc92",
+		"update-default services all --image go-services",
+		"update-default services avocado --image js-services --image js-quote",
 		"update-default services all --force",
 		"update-default lambda all",
 	}, "\n"),
@@ -78,12 +81,18 @@ var UpdateDefaultCmd = &cobra.Command{
 			return err
 		}
 
+		images, err := cmd.Flags().GetStringSlice("image")
+		if err != nil {
+			return err
+		}
+
 		params, err := parsers.Parse(args, useProd)
 		if err != nil {
 			return err
 		}
 
 		params.Force = force
+		params.Images = images
 
 		params.Branch = cdep.DefaultBranch
 		params.Message = message

@@ -17,9 +17,10 @@ func TestParseAll(t *testing.T) {
 	}
 
 	p.Branch = "master"
+	p.Images = []string{"go-services", "js-quote"}
 	p.Force = true
 
-	if got, want := p.String("update"), "update service avocado all --force"; got != want {
+	if got, want := p.String("update"), "update service avocado all --image go-services --image js-quote --force"; got != want {
 		t.Fatalf("String: got %q, want %q", got, want)
 	}
 }

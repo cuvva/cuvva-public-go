@@ -215,7 +215,7 @@ func TestPlanChecksEveryEnvBeforeWriting(t *testing.T) {
 	envs := map[string]struct{}{"avocado": {}, "basil": {}}
 	listed := []string{}
 
-	_, err := c.Plan(envs, func(env string) ([]serviceFile, error) {
+	_, err := c.Plan(envs, nil, func(env string) ([]serviceFile, error) {
 		listed = append(listed, env)
 
 		if env == "basil" {
@@ -231,5 +231,51 @@ func TestPlanChecksEveryEnvBeforeWriting(t *testing.T) {
 
 	if len(listed) != 2 {
 		t.Fatalf("listed %v, want both envs", listed)
+	}
+}
+
+func TestPlanFiltersByImage(t *testing.T) {
+	lookups := map[string]int{}
+	c := fakeBuilds(false, map[string]bool{"go-services": true, "js-services": true, "js-quote": true}, lookups)
+
+	list := func(env string) ([]serviceFile, error) {
+		return []serviceFile{
+			{Path: "_base.json", Image: "go-services"},
+			{Path: "service-sms.json", Image: "go-services"},
+			{Path: "service-web.json", Image: "js-services"},
+			{Path: "service-quote.json", Image: "js-quote"},
+		}, nil
+	}
+
+	envs := map[string]struct{}{"avocado": {}}
+
+	plans, err := c.Plan(envs, []string{"js-services", "js-quote"}, list, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got, want := joinServiceNames(plans["avocado"].Selected), "quote, web"; got != want {
+		t.Errorf("selected: got %q, want %q", got, want)
+	}
+
+	if got, want := joinServiceNames(plans["avocado"].Skipped), "_base, sms"; got != want {
+		t.Errorf("skipped: got %q, want %q", got, want)
+	}
+
+	// only the requested images are looked up
+	if lookups["go-services"] != 0 || lookups["js-services"] != 1 || lookups["js-quote"] != 1 {
+		t.Errorf("unexpected lookups: %v", lookups)
+	}
+
+	c = fakeBuilds(false, nil, lookups)
+	lookups["js-quote"] = 0
+
+	_, err = c.Plan(envs, []string{"go-servics"}, list, false)
+	if e := cher.Coerce(err); e.Code != "unknown_image" {
+		t.Fatalf("got %q, want unknown_image (err: %v)", e.Code, err)
+	}
+
+	if lookups["js-quote"] != 0 {
+		t.Errorf("ECR was checked before the mistyped image was caught: %v", lookups)
 	}
 }
