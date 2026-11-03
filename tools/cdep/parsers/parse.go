@@ -3,10 +3,16 @@ package parsers
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
+	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/cuvva/cuvva-public-go/tools/cdep"
 )
+
+// AllItems can be given in place of a list of services to select every
+// service in the environment.
+const AllItems = "all"
 
 // exceptions of services that start with "service-"
 var exceptions = map[string]struct{}{
@@ -42,8 +48,19 @@ func Parse(args []string, prodSys bool) (*Params, error) {
 	}
 
 	itemSet := []string{}
+	allItems := false
 
-	if len(args) > 2 {
+	if slices.Contains(args[2:], AllItems) {
+		if len(args) != 3 {
+			return nil, cher.New("all_must_be_alone", nil)
+		}
+
+		if t != "service" {
+			return nil, cher.New("all_requires_services", cher.M{"type": t})
+		}
+
+		allItems = true
+	} else if len(args) > 2 {
 		for _, item := range args[2:] {
 			// if we're dealing with services
 			if t == "service" {
@@ -66,5 +83,6 @@ func Parse(args []string, prodSys bool) (*Params, error) {
 		System:      system,
 		Environment: args[1],
 		Items:       itemSet,
+		AllItems:    allItems,
 	}, nil
 }

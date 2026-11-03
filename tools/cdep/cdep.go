@@ -1,6 +1,6 @@
 package cdep
 
-const Version = "0.6"
+const Version = "0.7"
 
 // DefaultBranch is the default main branch
 const DefaultBranch = "master"
@@ -25,6 +25,13 @@ var ErrorCodeMapping = map[string]string{
 	"invalid_agentcore_config":      "This agentcore config could not be parsed as JSON.",
 	"commit_requires_single_agent":  "A pinned --commit can only target one agentcore agent at a time, as each agent has its own source repo.",
 	"agentcore_requires_system_env": "agentcore config only exists under the \"_system\" env; use \"_system\" as the environment.",
+	"build_not_found":               "The image for this service hasn't been built for the commit yet. Wait for CI to finish, or pass --force to deploy anyway.",
+	"ecr_unavailable":               "cdep couldn't check ECR for the builds. Check your AWS credentials, or pass --force to deploy without checking.",
+	"unknown_image":                 "No service in the selected environment(s) runs the --image you gave. Check the spelling against the images below.",
+	"image_requires_services":       "--image only works with services.",
+	"all_requires_services":         "\"all\" can only be used to select services; list the items to update instead.",
+	"all_must_be_alone":             "\"all\" selects every service, so it cannot be combined with service names.",
+	"missing_services":              "Name the services to update, or use \"all\" to update every service in the environment.",
 }
 
 var OverruleChecks = map[string]string{

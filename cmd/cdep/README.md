@@ -13,7 +13,7 @@ A CLI tool to deploy things to a specific environment. Covers both orchestrated 
 
 This tool is designed to speed up quick day-to-day updates, and is not meant to be all encompassing.
 
-`cdep update {type} {env|all} {...services}`
+`cdep update {type} {env|all} {...services|all}`
 
 Supported types are `service`, `lambda`, `terra` and `agentcore`.
 
@@ -21,6 +21,8 @@ For example:
 
 - `cdep u service avocado -b fix-it sms ltm email web-underwriter`
 - `cdep u service all sms`
+- `cdep u service avocado all -b fix-it` (every service in avocado whose build is ready)
+- `cdep u service avocado all --image go-services -b fix-it` (every service running the go-services image)
 - `cdep u lambda avocado -b fix-it marketing-consent stm-policy-sale`
 - `cdep u service prod ltm --prod`
 - `cdep u service avocado ltm -b fix-it`
@@ -54,6 +56,8 @@ Or with some flags
 
 - `--prod`: work on prod, where `nonprod` is the default
 - `--branch {name}` (`-b`): define a branch to use, where `master` is the default
+- `--image {name}`: only update services running this docker image, see [Choosing services by image](#choosing-services-by-image)
+- `--force`: deploy services even if their build isn't in ECR yet, see [Only services whose build is ready](#only-services-whose-build-is-ready)
 
 ### update-web
 
@@ -76,7 +80,9 @@ Flags are:
 
 Specifically for fast forwarding the default commit on an environment, or all of them.
 
-This command will find all services on the `master` branch and remove that from the individual config of that service, and instead update `_default.json` to the latest commit hash.
+This command sets every config file of that type in the environment, including `_base.json`, to
+`master` at the latest commit (or the one given with `-c`). For services, files whose build isn't in
+ECR yet are skipped; see [Only services whose build is ready](#only-services-whose-build-is-ready).
 
 `cdep update-default {type} {env|all}`
 
@@ -84,8 +90,103 @@ For example
 
 - `cdep update-default lambdas avocado`
 - `cdep update-default services all`
+- `cdep update-default services avocado -c <40-char-hash>`
+- `cdep update-default services all --image go-services`
+
+Flags are:
+
+- `--prod`: work on the prod system, where `nonprod` is the default
+- `--commit {hash}` (`-c`): the full commit hash to deploy, where the latest `master` commit is the default
+- `--image {name}`: only update services running this docker image (repeat for more than one)
+- `--force`: deploy services even if their build isn't in ECR yet, or ECR can't be checked
+
+### Choosing services by image
+
+A change to a shared library usually means redeploying every service built from it. Each service
+runs one docker image, so `--image` picks services by the image they run. It works with `update`
+and `update-default`, for services only.
+
+| You want to... | Run |
+| --- | --- |
+| Move every Go service in avocado to the latest master | `cdep update-default services avocado --image go-services` |
+| Move every JS service in every nonprod env | `cdep update-default services all --image js-services --image js-quote --image js-motor-coverage` |
+| Put every `go-services` service in avocado on your branch | `cdep update service avocado all --image go-services -b my-branch` |
+
+The images in use today are `go-services`, `go-services-playwright`, `js-services`, `js-quote`,
+`js-motor-coverage`, `web-underwriter` and `web-mid`. If you mistype one, cdep stops before
+changing anything and lists the images it found.
+
+Use `--dry-run` first: cdep lists the services it will update and the ones it skipped, per
+environment.
+
+### Only services whose build is ready
+
+Each service runs one docker image (`go-services`, `go-services-playwright`, `js-services`,
+`js-quote`, `web-underwriter`, ...), and each image has its own CI build that finishes in its own
+time. Some images, like `go-services-playwright`, aren't built for every commit at all. Deploying a
+service before its image exists leaves its pods unable to start.
+
+So before changing any file, `update` and `update-default` check ECR for each service's image at
+the commit being deployed (`master-<commit>`, or `branch-<commit>` for other branches). Each image is
+looked up once, however many services use it.
+
+| You ran... | If a service's build isn't in ECR yet |
+| --- | --- |
+| `cdep update-default services {env}` | It's skipped and listed. Run the same command again once CI has finished to pick it up. |
+| `cdep update service {env} all` | Same: skipped and listed. |
+| `cdep update service {env} sms quote` | cdep stops with `build_not_found` and changes nothing. |
+
+For example, straight after a merge, while the JS builds are still running:
+
+```
+cdep update-default services avocado
+WARN avocado: skipping 12 service(s) until js-services:master-abc123... is built, run cdep again once CI has finished: ...
+```
+
+The Go services go out now; running the command again later deploys the rest.
+
+`--dry-run` shows what would be updated and skipped without committing anything. `--force` deploys
+everything regardless, including when ECR can't be reached.
+
+Because of this check, deploying services needs AWS credentials that can read ECR. Without them cdep stops with `ecr_unavailable`.
+
+How cdep finds a service's image:
+
+- `docker_image_name` in JSON config, or `image.repository` in YAML config. `--image` matches
+  this name exactly.
+- A service that doesn't set one inherits it from the env's `_base.json` / `_base.yaml`, as it does
+  when deployed. A service with no image cdep can find is skipped under `all` and `update-default`.
+- `update-default` treats `_base.json` like any other file: it's updated only when its own image is
+  built. If a skipped service takes its commit from `_base.json`, it moves along with it; cdep warns
+  and names it.
+- `all` on `update` covers every service file in the env but never `_base` files; use
+  `update-default` for those.
 
 ## Common errors
+
+### `build_not_found`
+
+A service you named hasn't got an image for the commit in ECR yet. Wait for its CI build to
+finish, or pass `--force` to deploy anyway.
+
+### `ecr_unavailable`
+
+cdep couldn't look the builds up in ECR, usually because your AWS credentials have expired. Log in
+again, or pass `--force` to deploy without checking.
+
+### `unknown_image`
+
+No service in the environment runs the image you passed to `--image`. cdep lists the images it
+found; check the spelling.
+
+### `all_requires_services` / `image_requires_services`
+
+`all` and `--image` only work for services. For lambdas, terra and agentcore, list the items, or
+use `update-default` to update every lambda.
+
+### `all_must_be_alone`
+
+`all` already selects every service, so don't add service names after it.
 
 ### `no_mono_variable`
 

@@ -12,13 +12,24 @@ type Params struct {
 	Commit      string
 	System      string
 	Items       []string
-	Message     string
+	// AllItems is set when "all" was given instead of a list of services, and
+	// selects every service in the environment.
+	AllItems bool
+	// Images limits services to those running one of these docker images
+	// (e.g. go-services). Empty means every service.
+	Images []string
+	// Force deploys services even when their image has not been built for the
+	// commit, or ECR cannot be checked.
+	Force   bool
+	Message string
 }
 
 func (p Params) String(command string) (out string) {
 	out = fmt.Sprintf("%s %s %s", command, p.Type, p.Environment)
 
-	if len(p.Items) > 0 {
+	if p.AllItems {
+		out = fmt.Sprintf("%s all", out)
+	} else if len(p.Items) > 0 {
 		items := []string{}
 		for _, item := range p.Items {
 			items = append(items, strings.TrimPrefix(item, "service-"))
@@ -26,6 +37,14 @@ func (p Params) String(command string) (out string) {
 
 		itemsStr := strings.Join(items, " ")
 		out = fmt.Sprintf("%s %s", out, itemsStr)
+	}
+
+	for _, image := range p.Images {
+		out = fmt.Sprintf("%s --image %s", out, image)
+	}
+
+	if p.Force {
+		out = fmt.Sprintf("%s --force", out)
 	}
 
 	if p.Branch != "master" {

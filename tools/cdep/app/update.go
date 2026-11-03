@@ -29,6 +29,10 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 		return cher.New("invalid_operation", nil)
 	}
 
+	if err := validateServiceSelection(req); err != nil {
+		return err
+	}
+
 	// agentcore config only exists under the _system env, so reject anything else
 	// (including "all") up front rather than failing later with a confusing
 	// missing-file error while iterating per-service environments.
@@ -125,38 +129,38 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 		return fmt.Errorf("load envs: %w", err)
 	}
 
+	var plans map[string]servicePlan
+
+	if req.Type == "service" {
+		builds := newBuildChecker(req.Commit, req.Branch, req.Force)
+
+		plans, err = builds.Plan(envs, req.Images, func(env string) ([]serviceFile, error) {
+			if req.AllItems {
+				// Every service in the env; env-wide _base files are left to update-default.
+				return listServiceFiles(path.Join(repoPath, req.System, env, "service"), false)
+			}
+
+			return namedServiceFiles(repoPath, req.System, env, req.Items)
+		}, !req.AllItems) // named services must have a build; "all" skips the ones that don't
+		if err != nil {
+			return err
+		}
+	}
+
 	var envNames []string
 	for env := range envs {
 		envNames = append(envNames, env)
 
 		switch req.Type {
 		case "service":
-			for _, service := range req.Items {
-				p := paths.GetPathForService(repoPath, req.System, env, service)
-
-				if _, err := os.Stat(p); err != nil {
-					p = paths.GetYamlPathForService(repoPath, req.System, env, service)
-					_, err2 := os.Stat(p)
-					if err2 != nil {
-						log.Warn(err)
-						log.Warn(err2)
-					}
-				}
-
-				err := checkECRImage(p, req.Commit, req.Branch)
-				if err != nil {
-					e := errors.Wrap(err, "ecr")
-					log.Warn(e)
-				}
-
-				changed, err := a.AddToConfig(p, req.Branch, req.Commit)
+			for _, f := range plans[env].Selected {
+				changed, err := a.AddToConfig(f.Path, req.Branch, req.Commit)
 				if err != nil {
 					return fmt.Errorf("add to config: %w", err)
 				}
 
 				if changed {
-					filename := path.Base(p)
-					shorthandPath := path.Join(req.System, env, "service", filename)
+					shorthandPath := path.Join(req.System, env, "service", f.Name())
 					updatedFiles = append(updatedFiles, shorthandPath)
 				}
 			}
@@ -259,6 +263,7 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 	printDashboards(dashboards)
 
 	if a.DryRun {
+		logDryRun(updatedFiles)
 		log.Info("Dry run only, stopping now")
 		log.Infof("commit message (%s)\n", commitMessage)
 		return nil
@@ -287,56 +292,67 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 	return nil
 }
 
-func checkECRImage(filePath, latestHash, branch string) error {
-	fileContents, err := os.ReadFile(filePath)
-	if err != nil {
-		return err
+// imageTag is the tag CI gives the image it builds for a commit.
+func imageTag(branch, commit string) string {
+	prefix := "master"
+	if branch != "master" {
+		prefix = "branch"
 	}
 
-	matches := imageName.FindSubmatch(fileContents)
-	if len(matches) != 2 {
-		return cher.New("invalid_docker_image_name", nil)
-	}
-
-	dockerImageName := matches[1]
-
-	return findBuildInECR(string(dockerImageName), latestHash, branch)
+	return fmt.Sprintf("%s-%s", prefix, commit)
 }
 
-func findBuildInECR(dockerImageName, latestHash, branch string) error {
+// findBuildInECR reports whether CI has pushed the image built for the commit.
+func findBuildInECR(dockerImageName, commit, branch string) (bool, error) {
 	cfg := config.AWS{
 		Region: "eu-west-1",
 	}
 
 	awsSession, err := cfg.Session()
 	if err != nil {
-		return errors.Wrap(err, "aws:")
+		return false, errors.Wrap(err, "aws:")
 	}
 
 	c := ecr.New(awsSession)
-
-	branchName := "master"
-
-	if branch != "master" {
-		branchName = "branch"
-	}
 
 	images, err := c.BatchGetImage(&ecr.BatchGetImageInput{
 		RegistryId:     ptr.String("005717268539"),
 		RepositoryName: ptr.String(dockerImageName),
 		ImageIds: []*ecr.ImageIdentifier{
 			{
-				ImageTag: ptr.String(fmt.Sprintf("%s-%s", branchName, latestHash)),
+				ImageTag: ptr.String(imageTag(branch, commit)),
 			},
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("batch get image: %w", err)
+		return false, fmt.Errorf("batch get image: %w", err)
 	}
 
-	if len(images.Images) != 1 {
-		log.Warn("Cannot find image in ECR!")
+	return len(images.Images) == 1, nil
+}
+
+// validateServiceSelection rejects "all" and --image for anything other than
+// services, where they have no meaning.
+func validateServiceSelection(req *parsers.Params) error {
+	if req.Type == "service" {
+		return nil
+	}
+
+	if req.AllItems {
+		return cher.New("all_requires_services", cher.M{"type": req.Type})
+	}
+
+	if len(req.Images) > 0 {
+		return cher.New("image_requires_services", cher.M{"type": req.Type})
 	}
 
 	return nil
+}
+
+func logDryRun(updatedFiles []string) {
+	log.Infof("%d file(s) would be updated:", len(updatedFiles))
+
+	for _, p := range updatedFiles {
+		log.Infof("  %s", p)
+	}
 }
