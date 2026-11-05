@@ -164,6 +164,26 @@ How cdep finds a service's image:
 
 ## Common errors
 
+
+### Deploying an older master commit
+
+A service on `master` is normally moved forward. When the commit being deployed is older than the
+one a service already runs, which is what a rollback looks like, `update` and `update-default` say
+so and ask before changing that file:
+
+```
+WARN Older master commit is going to be deployed, running: <commit>, new: <commit>, path: ...
+Deploy older master commit (rollback)? (y/n)
+```
+
+Answer once per running commit: every other service running that same commit gets the same answer
+without asking again, so rolling back twenty services is one question, not twenty. A service running
+a different commit is asked about on its own. Deploying a newer commit never asks, and neither does
+deploying a branch, which keeps its own "Override branch?" prompt.
+
+The comparison needs the code repo at `CUVVA_CODE_REPO`, which cdep fetches once per run. If a
+commit cannot be compared, cdep asks rather than guessing.
+
 ### `build_not_found`
 
 A service you named hasn't got an image for the commit in ECR yet. Wait for its CI build to

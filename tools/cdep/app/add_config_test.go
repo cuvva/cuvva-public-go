@@ -106,3 +106,59 @@ func TestAddToConfigBranchNames(t *testing.T) {
 		})
 	}
 }
+
+// A master-to-master deploy goes through the rollback check with the commit the
+// file currently holds, and a refusal leaves the file untouched.
+func TestAddToConfigMasterRollback(t *testing.T) {
+	tests := []struct {
+		name    string
+		file    string
+		initial string
+	}{
+		{
+			name:    "json",
+			file:    "service.json",
+			initial: "{\n\t\"branch\": \"master\",\n\t\"commit\": \"" + runningCommit + "\"\n}\n",
+		},
+		{
+			name:    "yaml",
+			file:    "service.yaml",
+			initial: "branch: master\ncommit: " + runningCommit + "\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, answer := range []bool{true, false} {
+				path := filepath.Join(t.TempDir(), tt.file)
+				if err := os.WriteFile(path, []byte(tt.initial), 0o600); err != nil {
+					t.Fatal(err)
+				}
+
+				r, _, asks := fakeRollbackCheck(answer)
+
+				changed, err := (App{rollbacks: r}).AddToConfig(path, "master", olderCommit)
+				if err != nil {
+					t.Fatalf("AddToConfig: %v", err)
+				}
+
+				out, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if *asks != 1 {
+					t.Fatalf("answer=%v: asks=%d, want 1", answer, *asks)
+				}
+
+				if changed != answer {
+					t.Fatalf("answer=%v: changed=%v", answer, changed)
+				}
+
+				if strings.Contains(string(out), olderCommit) != answer {
+					t.Fatalf("answer=%v: unexpected file contents:\n%s", answer, out)
+				}
+			}
+		})
+	}
+}

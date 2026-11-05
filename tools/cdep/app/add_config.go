@@ -14,10 +14,12 @@ import (
 var commitFreeze = regexp.MustCompile(`(?m)"cdep_freeze"\s*:\s*true`)
 
 var commitRegAdd = regexp.MustCompile(`"commit"\s*:\s*"[a-f\d]{40}"`)
+var commitValueReg = regexp.MustCompile(`"commit"\s*:\s*"([a-f\d]{40})"`)
 var branchRegAdd = regexp.MustCompile(`"branch"\s*:\s*"([^"]+)"`)
 var imageTagRegAdd = regexp.MustCompile(`"tag"\s*:\s*"([^"]+)"`)
 
 var commitRegAddYaml = regexp.MustCompile(`commit\s*:\s*"?[a-f\d]{40}"?`)
+var commitValueRegYaml = regexp.MustCompile(`commit\s*:\s*"?([a-f\d]{40})"?`)
 var imageTagRegAddYaml = regexp.MustCompile(`tag\s*:\s*"?[a-z\d-]+"?`)
 
 // branchRegAddYaml must match the same branch names git allows, which include
@@ -66,8 +68,7 @@ func (a App) AddToConfig(path, branchName, commitHash string) (bool, error) {
 }
 
 func (a App) doJsonUpdates(path string, branchName string, commitHash string, blob []byte) []byte {
-	override := promptIfOverride(blob, branchRegAdd, branchName, path)
-	if !override {
+	if !a.confirmOverride(blob, branchRegAdd, commitValueReg, branchName, commitHash, path) {
 		return blob
 	}
 
@@ -86,8 +87,7 @@ func (a App) doJsonUpdates(path string, branchName string, commitHash string, bl
 }
 
 func (a App) doYamlUpdates(path string, branchName string, commitHash string, blob []byte) []byte {
-	override := promptIfOverride(blob, branchRegAddYaml, branchName, path)
-	if !override {
+	if !a.confirmOverride(blob, branchRegAddYaml, commitValueRegYaml, branchName, commitHash, path) {
 		return blob
 	}
 
@@ -141,21 +141,32 @@ func attemptUpdateYaml(blob []byte, reg *regexp.Regexp, key, value string) []byt
 	return blob
 }
 
-func promptIfOverride(blob []byte, reg *regexp.Regexp, newBranch, path string) bool {
-	matches := reg.FindSubmatch(blob)
-
-	if len(matches) <= 1 {
+// confirmOverride asks before replacing a custom branch, and before moving a
+// service on master to an older master commit.
+func (a App) confirmOverride(blob []byte, branchReg, commitReg *regexp.Regexp, newBranch, newCommit, path string) bool {
+	branchName := submatch(blob, branchReg)
+	if branchName == "" {
 		return true
 	}
 
-	branchName := string(matches[1])
-
 	if branchName != "master" && branchName != newBranch {
 		log.Warnf("Custom branch is going to be overriden, old: %s, new: %s, path: %s", branchName, newBranch, path)
-		override := boolPrompt("Override branch?")
 
-		return override
+		return boolPrompt("Override branch?")
+	}
+
+	if branchName == "master" && newBranch == "master" {
+		return a.rollbacks.Confirm(submatch(blob, commitReg), newCommit, path)
 	}
 
 	return true
+}
+
+func submatch(blob []byte, reg *regexp.Regexp) string {
+	matches := reg.FindSubmatch(blob)
+	if len(matches) <= 1 {
+		return ""
+	}
+
+	return string(matches[1])
 }

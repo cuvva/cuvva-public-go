@@ -52,6 +52,13 @@ func (a App) Update(ctx context.Context, req *parsers.Params, overruleChecks []s
 		return cher.New("commit_requires_single_agent", nil)
 	}
 
+	// Agentcore commits come from other repos, so only monorepo deploys compare
+	// commit ages. AddToConfig runs on this copy of a, so the check's cache lasts
+	// for the whole run.
+	if req.Type != "agentcore" {
+		a.rollbacks = newRollbackCheck(ctx)
+	}
+
 	// agentcore items each declare their own source repo in their config, so the
 	// commit is resolved per-item below rather than once from the monorepo here.
 	if req.Commit == "" && req.Type != "agentcore" {
