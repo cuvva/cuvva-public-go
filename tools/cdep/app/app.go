@@ -7,4 +7,6 @@ import (
 type App struct {
 	DryRun bool
 	SNS    *sns.SNS
+
+	rollbacks *rollbackCheck
 }

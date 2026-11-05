@@ -22,6 +22,10 @@ func (a App) UpdateDefault(ctx context.Context, req *parsers.Params, overruleChe
 		return err
 	}
 
+	// AddToConfig runs on this copy of a, so the check's cache lasts for the
+	// whole run.
+	a.rollbacks = newRollbackCheck(ctx)
+
 	log.Info("getting latest commit hash")
 
 	if req.Commit == "" {
