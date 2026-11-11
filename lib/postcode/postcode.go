@@ -80,3 +80,17 @@ func Parse(postcode string) (*Parsed, error) {
 		Unit:           unit,
 	}, nil
 }
+
+const masked = "***"
+
+// Mask returns a form of the postcode that is safe to log: the outcode with the
+// incode hidden, e.g. "EC1R***". Input that doesn't parse returns "***", so a
+// mistyped postcode is never logged either.
+func Mask(postcode string) string {
+	p, err := Parse(postcode)
+	if err != nil {
+		return masked
+	}
+
+	return p.Outcode + masked
+}
