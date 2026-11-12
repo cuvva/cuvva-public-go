@@ -13,6 +13,7 @@ import (
 
 	"github.com/cuvva/cuvva-public-go/lib/cher"
 	"github.com/cuvva/cuvva-public-go/lib/jsonclient"
+	"github.com/cuvva/cuvva-public-go/lib/postcode"
 	"github.com/cuvva/cuvva-public-go/lib/version"
 )
 
@@ -122,18 +123,53 @@ func (c *Client) ReverseGeocode(ctx context.Context, latitude, longitude float64
 	return res.Result[0], nil
 }
 
-func (c *Client) Geocode(ctx context.Context, postcode string) (*Postcode, error) {
+func (c *Client) Geocode(ctx context.Context, pc string) (*Postcode, error) {
 	var res struct {
 		Status int       `json:"status"`
 		Result *Postcode `json:"result"`
 	}
 
-	err := c.Do(ctx, "GET", "/postcodes/"+postcode, nil, nil, &res)
+	err := c.Do(ctx, "GET", "/postcodes/"+pc, nil, nil, &res)
 	if err != nil {
-		return nil, err
+		return nil, redactGeocodeError(err, pc)
 	}
 
 	return res.Result, nil
+}
+
+// redactGeocodeError rebuilds a Geocode error without the postcode, which is
+// personal data. jsonclient puts the request path and URL in its errors, and
+// the path ends in the postcode.
+func redactGeocodeError(err error, pc string) error {
+	redact := func(s string) string { return s }
+	if pc != "" {
+		redact = strings.NewReplacer(
+			url.PathEscape(pc), "{postcode}",
+			pc, "{postcode}",
+		).Replace
+	}
+
+	var cErr cher.E
+	if !errors.As(err, &cErr) {
+		return cher.New("postcodes_request_failed", cher.M{
+			"postcode": postcode.Mask(pc),
+			"message":  redact(err.Error()),
+		})
+	}
+
+	meta := cher.M{"postcode": postcode.Mask(pc)}
+	for k, v := range cErr.Meta {
+		switch v := v.(type) {
+		case string:
+			meta[k] = redact(v)
+		case error:
+			meta[k] = redact(v.Error())
+		default:
+			meta[k] = v
+		}
+	}
+
+	return cher.New(cErr.Code, meta, cErr.Reasons...)
 }
 
 // ReverseGeocode returns a set (or no) postcodes that exist within a long/lat
@@ -159,25 +195,27 @@ func (fc *FailoverClient) ReverseGeocode(ctx context.Context, latitude, longitud
 	}, errors...)
 }
 
-func (fc *FailoverClient) Geocode(ctx context.Context, postcode string) (*Postcode, error) {
-	var errors []cher.E
+func (fc *FailoverClient) Geocode(ctx context.Context, pc string) (*Postcode, error) {
+	var reasons []cher.E
 
 	for _, cli := range fc.clients {
-		pc, err := cli.Geocode(ctx, postcode)
+		res, err := cli.Geocode(ctx, pc)
 		if err == nil {
-			return pc, nil
+			return res, nil
 		}
 
-		cErr := cher.New("postcodes_request_failed", cher.M{
-			"message": err.Error(),
-		})
+		// Client.Geocode returns a redacted cher, so keep it whole as the reason.
+		var cErr cher.E
+		if !errors.As(err, &cErr) {
+			cErr = cher.New("postcodes_request_failed", cher.M{"message": err.Error()})
+		}
 
-		errors = append(errors, cErr)
+		reasons = append(reasons, cErr)
 	}
 
 	return nil, cher.New("postcode_error", cher.M{
-		"postcode": postcode,
-	}, errors...)
+		"postcode": postcode.Mask(pc),
+	}, reasons...)
 }
 
 // interface guards
